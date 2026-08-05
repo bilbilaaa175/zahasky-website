@@ -5,8 +5,16 @@ const path = require('path');
 const express = require('express');
 // Menggunakan cara import modular sesuai dengan SDK Xendit versi terbaru
 const { Xendit } = require('xendit-node'); 
-// Tambahkan confirmSalesOrder ke dalam list destructuring import dari odooService
-const { getProducts, createSalesOrder, confirmSalesOrder, getDigitalFileUrl, getDigitalUrlByOrderId } = require('./odooService');
+
+// TAMBAHAN: Mengimpor getProductById dari odooService
+const { 
+    getProducts, 
+    getProductById, 
+    createSalesOrder, 
+    confirmSalesOrder, 
+    getDigitalFileUrl, 
+    getDigitalUrlByOrderId 
+} = require('./odooService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,14 +33,126 @@ const xenditClient = new Xendit({
 const { Invoice } = xenditClient;
 
 // =========================================================================
-// Endpoint 1: Ambil Produk dari Odoo (Via XML-RPC)
+// HELPER BARU: Mengubah Base64 panjang menjadi URL file .png yang rapi
+// =========================================================================
+function formatProductData(req, product) {
+    if (!product) return null;
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+    
+    const formatted = { ...product };
+
+    // Hapus string Base64 yang panjang
+    delete formatted.image_128;
+
+    // Arahkan langsung ke endpoint /image tanpa embel-embel nama file
+    formatted.image_url = `${protocol}://${host}/api/products/${product.id}/image`;
+
+    return formatted;
+}
+
+// =========================================================================
+// Endpoint 1: Ambil Semua Produk dari Odoo
 // =========================================================================
 app.get('/api/products', async (req, res) => {
     try {
         const odooData = await getProducts();
-        res.json({ success: true, products: odooData });
+        // Memformat seluruh list produk
+        const formattedProducts = odooData.map(p => formatProductData(req, p));
+        res.json({ success: true, products: formattedProducts });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// =========================================================================
+// Endpoint Kategori Khusus (Catalog, Package, Publicity)
+// =========================================================================
+
+// 1. Endpoint Catalog
+app.get('/api/catalog', async (req, res) => {
+    try {
+        const allProducts = await getProducts();
+        const catalogProducts = allProducts
+            .filter(p => 
+                (p.categ_id && p.categ_id[1].toLowerCase().includes('catalog')) || 
+                p.x_product_type === 'catalog'
+            )
+            .map(p => formatProductData(req, p)); // Bersihkan Base64 -> image_url
+
+        res.json({ success: true, products: catalogProducts });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 2. Endpoint Package
+app.get('/api/package', async (req, res) => {
+    try {
+        const allProducts = await getProducts();
+        const packageProducts = allProducts
+            .filter(p => 
+                (p.categ_id && p.categ_id[1].toLowerCase().includes('package')) || 
+                p.x_product_type === 'package'
+            )
+            .map(p => formatProductData(req, p)); // Bersihkan Base64 -> image_url
+
+        res.json({ success: true, products: packageProducts });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 3. Endpoint Publicity
+app.get('/api/publicity', async (req, res) => {
+    try {
+        const allProducts = await getProducts();
+        const publicityProducts = allProducts
+            .filter(p => 
+                (p.categ_id && p.categ_id[1].toLowerCase().includes('publicity')) || 
+                p.x_product_type === 'publicity'
+            )
+            .map(p => formatProductData(req, p)); // Bersihkan Base64 -> image_url
+
+        res.json({ success: true, products: publicityProducts });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// =========================================================================
+// Endpoint Detail 1 Produk Berdasarkan ID
+// =========================================================================
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const product = await getProductById(req.params.id);
+        const formattedProduct = formatProductData(req, product);
+        res.json({ success: true, product: formattedProduct });
+    } catch (error) {
+        res.status(404).json({ success: false, error: error.message });
+    }
+});
+
+// =========================================================================
+// ENDPOINT GAMBAR BARU: Menyajikan File Gambar (.png) Asli
+// =========================================================================
+app.get('/api/products/:id/image', async (req, res) => {
+    try {
+        const product = await getProductById(req.params.id);
+        if (!product || !product.image_128) {
+            return res.status(404).send('Gambar tidak ditemukan');
+        }
+
+        const imgBuffer = Buffer.from(product.image_128, 'base64');
+        
+        res.writeHead(200, {
+            'Content-Type': 'image/png',
+            'Content-Length': imgBuffer.length
+        });
+        res.end(imgBuffer);
+    } catch (error) {
+        res.status(500).send(error.message);
     }
 });
 
@@ -41,10 +161,9 @@ app.get('/api/products', async (req, res) => {
 // =========================================================================
 app.post('/api/checkout', async (req, res) => {
     try {
-        // Tambahkan productId dikirim dari Postman
         const { productId, productName, price, customerEmail } = req.body; 
 
-        // 1. Buat data Sales Order di Odoo 19 dengan Product ID asli
+        // 1. Buat data Sales Order di Odoo dengan Product ID asli
         const odooOrderId = await createSalesOrder(1, productId, productName, price);
         console.log(`✓ Sales Order sukses dibuat di Odoo dengan ID: ${odooOrderId}`);
 
@@ -62,7 +181,6 @@ app.post('/api/checkout', async (req, res) => {
                         price: price,
                         quantity: 1,
                         category: 'Digital Product',
-                        // Kita simpan productId Odoo di sini agar bisa diambil pas webhook masuk
                         referenceId: String(productId) 
                     }
                 ]
