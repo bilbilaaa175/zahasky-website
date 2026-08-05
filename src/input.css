@@ -7,26 +7,60 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles / custom classes boleh ditambahkan di sini, mirip style.css di setup Bootstrap */
+/* Base styles */
 body {
   background-color: #FFFFFF;
   color: #1A1A1A;
 }
 
-.section-placeholder {
-  position: relative;
-  border: 2px dashed rgba(68, 27, 7, 0.4);
-  background-color: rgba(255, 255, 255, 0.55);
-  border-radius: 1rem;
-}
-
-.section-placeholder-badge {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-}
-
-/* Mobile nav: disembunyikan secara default, dibuka lewat JS toggle (lihat index.html) */
+/* Mobile nav toggle state */
 #mobile-menu.is-open {
   display: flex;
+}
+
+/* Custom Component Classes */
+@layer components {
+  /* --- NAVBAR NAVIGATION --- */
+  /* Link Navbar Biasa (Belum Aktif) */
+  .nav-link {
+    @apply text-gray-400 font-medium transition-colors duration-200 hover:text-brown/70;
+  }
+
+  /* Link Navbar Aktif (Halaman Saat Ini) */
+  .nav-link-active {
+    @apply text-brown font-semibold transition-colors duration-200 hover:text-brown/70;
+  }
+
+  /* --- FORM & BUTTON COMPONENTS --- */
+  /* Helper class untuk tombol pill/oval */
+  .rounded-pill {
+    border-radius: 9999px;
+  }
+
+  /* Label pada Form Input */
+  .field-label {
+    @apply block text-sm font-semibold text-ink/90 mb-1.5;
+  }
+
+  /* Style Input Text/Email/Password */
+  .field-input {
+    @apply w-full px-4 py-3 text-sm text-ink bg-white border border-gray-200 rounded-2xl 
+           placeholder:text-gray-400 focus:outline-none focus:border-brown focus:ring-1 focus:ring-brown 
+           transition-all duration-200;
+  }
+
+  /* Tombol Cokelat Utama (Daftar / Masuk) */
+  .btn-primary {
+    @apply w-full py-3.5 px-6 rounded-full bg-brown text-cream text-base font-semibold 
+           hover:bg-ink active:scale-[0.99] transition-all duration-200 shadow-sm cursor-pointer;
+  }
+
+  /* --- PLACEHOLDER COMPONENTS --- */
+  .placeholder-section {
+    @apply relative border-2 border-dashed border-brown/30 bg-brown/5 rounded-3xl items-center justify-center p-8;
+  }
+
+  .placeholder-label {
+    @apply font-mono text-xs font-semibold text-brown/60 tracking-wider uppercase text-center;
+  }
 }
