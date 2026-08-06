@@ -33,11 +33,11 @@
 
       <!-- Menu Utama (Desktop) -->
       <nav class="hidden md:flex items-center gap-10 text-base font-medium text-ink">
-        <a href="index.html" class="hover:text-brown transition-colors">Home</a>
-        <a href="catalog.html" class="text-brown font-semibold border-b-2 border-brown pb-1">Catalog</a>
-        <a href="package.html" class="hover:text-brown transition-colors">Package</a>
-        <a href="publicity.html" class="hover:text-brown transition-colors">Publicity</a>
-        <a href="index.html#contact" class="hover:text-brown transition-colors">Contact</a>
+        <a href="index.html" class="hover:text-brown text-muted">Home</a>
+        <a href="catalog.html" class="text-brown font-semibold">Catalog</a>
+        <a href="package.html" class="hover:text-brown text-muted">Package</a>
+        <a href="publicity.html" class="hover:text-brown text-muted">Publicity</a>
+        <a href="index.html#contact" class="hover:text-brown text-muted">Contact</a>
       </nav>
 
       <!-- Cart, Login, Register & Mobile Toggle -->
@@ -100,6 +100,44 @@
         <p class="text-muted mt-3 max-w-2xl mx-auto md:mx-0">
           Jelajahi koleksi file desain interior siap pakai — gambar kerja, model 3D, dan konsep lengkap yang bisa langsung diunduh setelah pembelian.
         </p>
+      </div>
+
+      <!-- SEARCH BAR & FILTER KATEGORI -->
+      <div class="mt-6 mb-8 flex flex-col md:flex-row items-center gap-3 w-full"> 
+        
+        <!-- Search Input Container -->
+        <div style="position: relative; display: flex; align-items: center;" class="w-full md:w-56 shrink-0">
+          <svg style="width:16px; height:16px; position: absolute; left: 14px; pointer-events: none; color: #a1a1aa; z-index: 10;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Cari produk..." 
+            style="padding-left: 38px !important; width: 100%;" 
+            class="py-2.5 pr-4 rounded-full border border-brown/15 bg-white text-xs md:text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:border-brown transition-colors shadow-none"
+          />
+        </div>
+
+        <!-- Filter Kategori Buttons (Ditambahkan flex-1 text-center agar membagi rata sisa ruang ke kanan) -->
+        <div class="flex-1 flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full" id="category-filters">
+          <button type="button" data-category="ALL" class="flex-1 text-center filter-btn active rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-brown text-cream border border-brown transition-all whitespace-nowrap shadow-none">
+            Semua
+          </button>
+          <button type="button" data-category="Kursi" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+            Kursi
+          </button>
+          <button type="button" data-category="Meja" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+            Meja
+          </button>
+          <button type="button" data-category="Lemari" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+            Lemari
+          </button>
+          <button type="button" data-category="Sofa" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+            Sofa
+          </button>
+        </div>
+
       </div>
 
       <!-- LOADING SKELETON -->

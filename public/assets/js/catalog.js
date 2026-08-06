@@ -1,6 +1,12 @@
 // js/catalog.js
 const API_BASE_URL = "/api";
 
+// --- STATE GLOBAL UNTUK FILTERING ---
+let allProducts = [];        // Menyimpan seluruh data produk mentah yang didapat dari API
+let currentCategory = "ALL"; // Menyimpan kategori yang sedang dipilih (default: ALL)
+let currentSearchQuery = ""; // Menyimpan kata kunci pencarian yang sedang diketik (default: kosong)
+
+// --- FUNGSI UTILITAS FORMAT UANG & NAVIGASI ---
 function formatRupiah(amount) {
   if (!amount) return "Rp 0";
   return new Intl.NumberFormat("id-ID", {
@@ -22,6 +28,7 @@ function navigateToId(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// --- FUNGSI RENDER BREADCRUMB ---
 function renderBreadcrumb(product) {
   const breadcrumb = document.getElementById("breadcrumb");
   const sep = '<span class="text-brown/30">/</span>';
@@ -46,11 +53,12 @@ function renderBreadcrumb(product) {
   }
 }
 
+// --- FUNGSI PEMBUATAN HTML KARTU PRODUK ---
 function buildCardHTML(product) {
   const categoryName = Array.isArray(product.categ_id) ? product.categ_id[1] : "Catalog";
-  const rawDesc = product.x_product_description;
+  const rawDesc = product.x_product_description || "";
   const shortDesc = rawDesc.length > 50 ? rawDesc.substring(0, 50) + "..." : rawDesc;
-  const fileFormat = product.x_file_format;
+  const fileFormat = product.x_file_format || "ZIP";
 
   return `
     <article
@@ -90,6 +98,38 @@ function attachCardClickHandlers(container) {
   });
 }
 
+// --- FUNGSI PENYARINGAN PRODUK & RENDER KE GRID ---
+function applyFiltersAndRender() {
+  const grid = document.getElementById("list-grid");
+
+  // Melakukan penyaringan (filtering) pada array allProducts
+  const filtered = allProducts.filter((product) => {
+    const categoryName = Array.isArray(product.categ_id) ? product.categ_id[1] : "Catalog";
+    
+    // 1. Cek apakah kategori cocok dengan yang dipilih
+    const matchCategory =
+      currentCategory === "ALL" ||
+      categoryName.toLowerCase().includes(currentCategory.toLowerCase());
+
+    // 2. Cek apakah nama produk mengandung kata kunci pencarian
+    const matchSearch = product.name
+      .toLowerCase()
+      .includes(currentSearchQuery.toLowerCase());
+
+    // Produk lolos jika memenuhi kedua kriteria di atas
+    return matchCategory && matchSearch;
+  });
+
+  // Tampilkan hasil filter jika ada produk, jika tidak ada tampilkan pesan kosong
+  if (filtered.length > 0) {
+    grid.innerHTML = filtered.map(buildCardHTML).join("");
+    attachCardClickHandlers(grid);
+  } else {
+    grid.innerHTML = `<p class="col-span-full text-center text-muted py-12">Produk yang kamu cari tidak ditemukan.</p>`;
+  }
+}
+
+// --- FUNGSI MEMUAT DATA KATALOG DARI API ---
 async function renderListView() {
   const skeleton = document.getElementById("list-skeleton");
   const grid = document.getElementById("list-grid");
@@ -104,8 +144,9 @@ async function renderListView() {
     skeleton.classList.add("hidden");
 
     if (data.success && data.products.length > 0) {
-      grid.innerHTML = data.products.map(buildCardHTML).join("");
-      attachCardClickHandlers(grid);
+      allProducts = data.products; // Simpan data produk dari server ke state global
+      applyFiltersAndRender();     // Tampilkan produk ke layar sesuai filter awal
+      setupFilterEvents();         // Pasang event listener untuk search bar & tombol filter
     } else {
       grid.innerHTML = `<p class="col-span-full text-center text-muted py-10">Belum ada produk katalog yang tersedia.</p>`;
     }
@@ -116,6 +157,70 @@ async function renderListView() {
   }
 }
 
+// Fungsi menyaring produk berdasarkan pencarian & kategori
+function applyFiltersAndRender() {
+  const grid = document.getElementById("list-grid");
+
+  const filtered = allProducts.filter((product) => {
+    // Ambil nama kategori dari Odoo / API
+    const categoryName = Array.isArray(product.categ_id) ? product.categ_id[1] : (product.category || "");
+    
+    // 1. Filter Kategori (Abaikan huruf besar/kecil)
+    const matchCategory =
+      currentCategory === "ALL" ||
+      categoryName.toLowerCase().includes(currentCategory.toLowerCase());
+
+    // 2. Filter Search Bar (Cari di Nama atau Deskripsi)
+    const productName = product.name || "";
+    const productDesc = product.x_product_description || "";
+    
+    const matchSearch =
+      productName.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
+      productDesc.toLowerCase().includes(currentSearchQuery.toLowerCase());
+
+    return matchCategory && matchSearch;
+  });
+
+  if (filtered.length > 0) {
+    grid.innerHTML = filtered.map(buildCardHTML).join("");
+    attachCardClickHandlers(grid);
+  } else {
+    grid.innerHTML = `<p class="col-span-full text-center text-muted py-12">Produk yang kamu cari tidak ditemukan.</p>`;
+  }
+}
+
+// Handler event filter & search
+function setupFilterEvents() {
+  const searchInput = document.getElementById("search-input");
+  if (searchInput && !searchInput.dataset.hasListener) {
+    searchInput.dataset.hasListener = "true";
+    searchInput.addEventListener("input", (e) => {
+      currentSearchQuery = e.target.value.trim();
+      applyFiltersAndRender();
+    });
+  }
+
+  const filterBtns = document.querySelectorAll(".filter-btn");
+  filterBtns.forEach((btn) => {
+    if (!btn.dataset.hasListener) {
+      btn.dataset.hasListener = "true";
+      btn.addEventListener("click", () => {
+        filterBtns.forEach((b) => {
+          b.classList.remove("active", "bg-brown", "text-cream", "border-brown");
+          b.classList.add("bg-white", "text-muted", "border-brown/15");
+        });
+
+        btn.classList.remove("bg-white", "text-muted", "border-brown/15");
+        btn.classList.add("active", "bg-brown", "text-cream", "border-brown");
+
+        currentCategory = btn.getAttribute("data-category");
+        applyFiltersAndRender();
+      });
+    }
+  });
+}
+
+// --- FUNGSI RENDER DETAIL VIEW ---
 async function renderDetailView(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/products/${id}`);
@@ -130,14 +235,12 @@ async function renderDetailView(id) {
 
     document.title = `${product.name} — Zahasky Catalog`;
 
-    // 1. Gambar Utama
     const mainImage = document.getElementById("detail-main-image");
     if (mainImage) {
       mainImage.src = product.image_url;
       mainImage.alt = product.name;
     }
 
-    // 2. Category, Title, Price
     const categoryName = Array.isArray(product.categ_id) ? product.categ_id[1] : "Catalog";
     
     const elCategory = document.getElementById("detail-category");
@@ -148,13 +251,11 @@ async function renderDetailView(id) {
     if (elTitle) elTitle.textContent = product.name;
     if (elPrice) elPrice.textContent = formatRupiah(product.list_price);
 
-    // 3. Deskripsi Produk (x_product_description)
     const elDesc = document.getElementById("detail-description");
     if (elDesc) {
       elDesc.innerHTML = `<p>${product.x_product_description || 'File desain interior kualitas tinggi siap pakai.'}</p>`;
     }
 
-    // 4. Format, Ukuran File, Series, Desainer, Peran Desainer (x_file_format, x_file_size, x_series, x_designer_name, x_designer_role)
     const elSeries = document.getElementById("detail-series");
     const elFormat = document.getElementById("detail-format");
     const elSize = document.getElementById("detail-size");
@@ -167,7 +268,6 @@ async function renderDetailView(id) {
     if (elDesigner) elDesigner.textContent = product.x_designer_name || "-";
     if (elRole) elRole.textContent = product.x_designer_role || "-";
 
-// 5. Tombol Aksi (Tambah ke Keranjang & Beli Sekarang)
     const elActions = document.getElementById("detail-actions");
     if (elActions) {
       elActions.innerHTML = `
@@ -194,6 +294,7 @@ async function renderDetailView(id) {
   }
 }
 
+// --- FUNGSI RENDER REKOMENDASI PRODUK LAIN ---
 async function renderRelatedItems(currentId) {
   const relatedGrid = document.getElementById("related-grid");
   try {
@@ -210,6 +311,7 @@ async function renderRelatedItems(currentId) {
   }
 }
 
+// --- FUNGSI UTAMA PENENTU TAMPILAN (LIST vs DETAIL) ---
 function render() {
   const id = getIdFromUrl();
   const viewList = document.getElementById("view-list");
@@ -236,10 +338,11 @@ function buyNow(productId) {
   alert(`Melanjut ke checkout untuk Produk ID ${productId}`);
 }
 
-document.getElementById("btn-back-to-list").addEventListener("click", function () {
+document.getElementById("btn-back-to-list")?.addEventListener("click", function () {
   navigateToId(null);
 });
 
 window.addEventListener("popstate", render);
 
+// Inisialisasi awal saat halaman dibuka
 render();
