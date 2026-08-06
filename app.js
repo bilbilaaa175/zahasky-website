@@ -35,13 +35,28 @@ const { Invoice } = xenditClient;
 // =========================================================================
 // HELPER BARU: Mengubah Base64 panjang menjadi URL file .png yang rapi
 // =========================================================================
+
+// 1. TAMBAHKAN MAPPING ROLE DI SINI (Di atas fungsi formatProductData)
+const ROLE_MAP = {
+  'product_designer': '3D Product Designer',
+  'industrial_designer': 'Industrial Designer',
+  'graphic_designer': 'Graphic Designer'
+};
+
 function formatProductData(req, product) {
     if (!product) return null;
 
     const host = req.get('host');
     const protocol = req.protocol;
     
-    const formatted = { ...product };
+    // 2. PROSES TRANSLASI ROLE DESAINER
+    const rawRole = product.x_designer_role || '';
+    const formattedRole = ROLE_MAP[rawRole] || rawRole;
+
+    const formatted = { 
+        ...product,
+        x_designer_role: formattedRole // Override dengan label nama rapi
+    };
 
     // Hapus string Base64 yang panjang
     delete formatted.image_128;
@@ -70,52 +85,53 @@ app.get('/api/products', async (req, res) => {
 // Endpoint Kategori Khusus (Catalog, Package, Publicity)
 // =========================================================================
 
-// 1. Endpoint Catalog
+// Helper fungsi filter kategori (case-insensitive & aman dari error null)
+function filterByCategory(products, targetCategory) {
+    return products.filter(p => {
+        // Cek dari categ_id bawaan Odoo (misal: [13, "Package"])
+        const categName = Array.isArray(p.categ_id) ? p.categ_id[1] : '';
+        // Cek dari custom field x_product_type jika ada
+        const customType = p.x_product_type || '';
+
+        return categName.toLowerCase().includes(targetCategory) || 
+               customType.toLowerCase().includes(targetCategory);
+    });
+}
+
+// 1. ENDPOINT HANYA UNTUK CATALOG
 app.get('/api/catalog', async (req, res) => {
     try {
         const allProducts = await getProducts();
-        const catalogProducts = allProducts
-            .filter(p => 
-                (p.categ_id && p.categ_id[1].toLowerCase().includes('catalog')) || 
-                p.x_product_type === 'catalog'
-            )
-            .map(p => formatProductData(req, p)); // Bersihkan Base64 -> image_url
+        const catalogOnly = filterByCategory(allProducts, 'catalog')
+            .map(p => formatProductData(req, p));
 
-        res.json({ success: true, products: catalogProducts });
+        res.json({ success: true, products: catalogOnly });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// 2. Endpoint Package
+// 2. ENDPOINT HANYA UNTUK PACKAGE
 app.get('/api/package', async (req, res) => {
     try {
         const allProducts = await getProducts();
-        const packageProducts = allProducts
-            .filter(p => 
-                (p.categ_id && p.categ_id[1].toLowerCase().includes('package')) || 
-                p.x_product_type === 'package'
-            )
-            .map(p => formatProductData(req, p)); // Bersihkan Base64 -> image_url
+        const packageOnly = filterByCategory(allProducts, 'package')
+            .map(p => formatProductData(req, p));
 
-        res.json({ success: true, products: packageProducts });
+        res.json({ success: true, products: packageOnly });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// 3. Endpoint Publicity
+// 3. ENDPOINT HANYA UNTUK PUBLICITY
 app.get('/api/publicity', async (req, res) => {
     try {
         const allProducts = await getProducts();
-        const publicityProducts = allProducts
-            .filter(p => 
-                (p.categ_id && p.categ_id[1].toLowerCase().includes('publicity')) || 
-                p.x_product_type === 'publicity'
-            )
-            .map(p => formatProductData(req, p)); // Bersihkan Base64 -> image_url
+        const publicityOnly = filterByCategory(allProducts, 'publicity')
+            .map(p => formatProductData(req, p));
 
-        res.json({ success: true, products: publicityProducts });
+        res.json({ success: true, products: publicityOnly });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

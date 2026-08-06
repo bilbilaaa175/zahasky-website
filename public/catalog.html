@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Title diupdate otomatis oleh JS saat masuk Detail View (lihat script di bawah) -->
   <title>Catalog — Zahasky</title>
 
-  <!-- Google Fonts: Playfair Display (heading) + Poppins (body/nav) + JetBrains Mono (angka/badge/code) -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -14,38 +13,34 @@
     rel="stylesheet"
   />
 
-  <!-- Tailwind — hasil compile dari src/input.css, jangan diedit manual.
-       Kalau butuh style baru, edit src/input.css lalu jalankan `npm run build:css` -->
+  <!-- Tailwind CSS -->
   <link rel="stylesheet" href="tailwind.css" />
 </head>
 
 <body class="antialiased font-sans bg-cream/30">
 
   <!-- ================================================================= -->
-  <!-- 1. HEADER — NAVBAR ZAHASKY (sama persis dengan index.html, tapi   -->
-  <!--    link "Catalog" ditandai aktif & mengarah ke halaman terpisah) -->
+  <!-- 1. HEADER — NAVBAR ZAHASKY                                        -->
   <!-- ================================================================= -->
   <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-brown/10">
 
-    <!-- Main Navbar -->
     <div class="max-w-7xl mx-auto px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
 
-      <!-- Kiri: Logo, mengarah balik ke Home (index.html) -->
+      <!-- Logo -->
       <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">
         Zahasky.
       </a>
 
-      <!-- Tengah: Menu Utama (desktop) — MPA: tiap link = file .html terpisah -->
+      <!-- Menu Utama (Desktop) -->
       <nav class="hidden md:flex items-center gap-10 text-base font-medium text-ink">
         <a href="index.html" class="hover:text-brown transition-colors">Home</a>
-        <!-- Halaman aktif diberi warna brown + underline supaya user tahu sedang di mana -->
         <a href="catalog.html" class="text-brown font-semibold border-b-2 border-brown pb-1">Catalog</a>
         <a href="package.html" class="hover:text-brown transition-colors">Package</a>
         <a href="publicity.html" class="hover:text-brown transition-colors">Publicity</a>
         <a href="index.html#contact" class="hover:text-brown transition-colors">Contact</a>
       </nav>
 
-      <!-- Kanan: Cart, Login, Register (desktop) + Hamburger (mobile) -->
+      <!-- Cart, Login, Register & Mobile Toggle -->
       <div class="flex items-center gap-2 md:gap-4">
         <button type="button" aria-label="Keranjang belanja" class="relative p-2 rounded-full hover:bg-brown/5 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
@@ -60,7 +55,6 @@
         <button type="button" class="hidden md:inline-block text-base font-semibold text-ink hover:text-brown transition-colors">Login</button>
         <button type="button" class="hidden md:inline-block rounded-pill bg-brown text-cream text-base font-semibold px-5 py-2.5 hover:bg-ink transition-colors">Register</button>
 
-        <!-- Hamburger toggle (mobile only) -->
         <button type="button" id="mobile-menu-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="mobile-menu" class="md:hidden p-2 rounded-full hover:bg-brown/5 transition-colors">
           <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -72,7 +66,7 @@
       </div>
     </div>
 
-    <!-- Mobile Menu (dropdown, disembunyikan default lewat JS) -->
+    <!-- Mobile Menu -->
     <div id="mobile-menu" class="md:hidden hidden flex-col border-t border-brown/10 bg-white px-6 py-4 gap-1">
       <a href="index.html" class="py-2.5 text-base font-medium text-ink border-b border-brown/5">Home</a>
       <a href="catalog.html" class="py-2.5 text-base font-semibold text-brown border-b border-brown/5">Catalog</a>
@@ -90,27 +84,17 @@
   <!-- ================================================================= -->
   <!-- MAIN CONTENT                                                      -->
   <!-- ================================================================= -->
-  <main class="max-w-7xl mx-auto px-6 md:px-12 py-6 md:py-10">
+  <main class="max-w-7xl mx-auto px-6 md:px-12 py-3 md:py-6">
 
-    <!-- =============================================================== -->
-    <!-- SECTION: BREADCRUMB NAVIGATION                                  -->
-    <!-- Diisi ulang oleh JS (renderBreadcrumb) tergantung mode:         -->
-    <!--   List View   -> Home / Catalog                                 -->
-    <!--   Detail View -> Home / Catalog / [Judul Item]                  -->
-    <!-- =============================================================== -->
-    <nav id="breadcrumb" aria-label="Breadcrumb" class="mb-6 text-sm font-medium text-muted flex items-center flex-wrap gap-1">
-      <!-- konten breadcrumb di-inject oleh JavaScript -->
+    <!-- BREADCRUMB NAVIGATION -->
+    <nav id="breadcrumb" aria-label="Breadcrumb" class="mb-1 text-sm font-medium text-muted flex items-center flex-wrap gap-1">
+      <!-- Di-inject oleh catalog.js -->
     </nav>
 
 
-    <!-- =============================================================== -->
-    <!-- VIEW 1: LIST VIEW (Grid Card Catalog)                           -->
-    <!-- Container ini ditampilkan saat TIDAK ada query param ?slug=     -->
-    <!-- di URL. Disembunyikan otomatis saat masuk ke Detail View.       -->
-    <!-- =============================================================== -->
+    <!-- VIEW 1: LIST VIEW (Grid Card Catalog) -->
     <section id="view-list">
 
-      <!-- Heading halaman -->
       <div class="mb-8 md:mb-10 text-center md:text-left">
         <h1 class="font-serif text-3xl md:text-5xl font-bold text-brown mt-2">Catalog</h1>
         <p class="text-muted mt-3 max-w-2xl mx-auto md:mx-0">
@@ -118,128 +102,134 @@
         </p>
       </div>
 
-      <!-- SECTION: LOADING SKELETON — tampil sesaat sebelum data mock selesai "fetch" -->
+      <!-- LOADING SKELETON -->
       <div id="list-skeleton" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-        <!-- 6 kotak skeleton statis; dihapus otomatis oleh JS setelah data siap -->
         <div class="animate-pulse rounded-2xl bg-brown/5 h-72"></div>
         <div class="animate-pulse rounded-2xl bg-brown/5 h-72"></div>
         <div class="animate-pulse rounded-2xl bg-brown/5 h-72"></div>
       </div>
 
-      <!-- SECTION: GRID LIST CARD — hasil render item catalog dari data-mock.js -->
-      <!-- Kosong secara default, diisi oleh function renderListView() lewat JS -->
+      <!-- GRID LIST CARD -->
       <div id="list-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"></div>
     </section>
 
 
-    <!-- =============================================================== -->
-    <!-- VIEW 2: DETAIL VIEW (Master-Detail)                              -->
-    <!-- Container ini ditampilkan saat URL punya query param ?slug=...   -->
-    <!-- Contoh: catalog.html?slug=modern-minimalist-living-room          -->
-    <!-- Disembunyikan (hidden) secara default sampai JS mengaktifkannya. -->
-    <!-- =============================================================== -->
+    <!-- VIEW 2: DETAIL VIEW -->
     <section id="view-detail" class="hidden">
 
-      <!-- SECTION: TOMBOL KEMBALI KE LIST VIEW -->
-      <button id="btn-back-to-list" type="button" class="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-brown hover:text-ink transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        Kembali ke Catalog
-      </button>
-
+      <button id="btn-back-to-list" type="button" class="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-brown hover:text-ink transition-colors"></button>
+  
       <div id="detail-content" class="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-14">
 
-        <!-- ============================================================= -->
-        <!-- SUB-SECTION: GALERI GAMBAR (kolom kiri)                        -->
-        <!-- ============================================================= -->
+        <!-- GALERI GAMBAR (KIRI) -->
         <div>
-          <!-- Gambar utama, berganti saat thumbnail di bawah diklik -->
           <div class="rounded-2xl overflow-hidden bg-brown/5 aspect-[4/3]">
             <img id="detail-main-image" src="" alt="" class="w-full h-full object-cover" />
           </div>
-          <!-- Thumbnail strip galeri -->
-          <div id="detail-thumbnails" class="mt-4 grid grid-cols-4 gap-3">
-            <!-- diisi oleh JS: renderDetailView() -->
-          </div>
         </div>
+        
+  <!-- INFORMASI PRODUK (KANAN) -->
+  <div>
+    <!-- Badge Kategori -->
+    <span id="detail-category" class="inline-block font-mono text-xs font-semibold uppercase tracking-wide text-brown bg-brown/10 px-3 py-1 rounded-pill"></span>
 
-        <!-- ============================================================= -->
-        <!-- SUB-SECTION: INFORMASI PRODUK + CTA (kolom kanan)              -->
-        <!-- ============================================================= -->
-        <div>
-          <!-- Badge kategori -->
-          <span id="detail-category" class="inline-block font-mono text-xs font-semibold uppercase tracking-wide text-brown bg-brown/10 px-3 py-1 rounded-pill"></span>
+    <!-- Judul Produk -->
+    <h1 id="detail-title" class="font-serif text-2xl md:text-4xl font-bold text-brown mt-3"></h1>
 
-          <!-- Judul item -->
-          <h1 id="detail-title" class="font-serif text-2xl md:text-4xl font-bold text-brown mt-4"></h1>
+    <!-- Harga -->
+    <p id="detail-price" class="font-mono text-2xl md:text-3xl font-bold text-brown mt-2"></p>
 
-          <!-- Harga -->
-          <p id="detail-price" class="font-mono text-xl md:text-2xl font-semibold text-ink mt-3"></p>
+    <!-- KELOMPOK KARTU SPESIFIKASI & INFORMASI -->
+  <div class="space-y-3 mt-6">
+    <!-- 1. Card Series (1 Card Penuh: Kiri "Series", Kanan "Nama Series") -->
+    <div class="p-4 rounded-2xl border border-brown/15 bg-white flex items-center justify-between shadow-sm">
+      <span class="text-xs text-muted font-medium">Series</span>
+      <span id="detail-series" class="text-sm font-semibold text-ink">-</span>
+    </div>
 
-          <!-- Tag/label item -->
-          <div id="detail-tags" class="flex flex-wrap gap-2 mt-4"></div>
-
-          <!-- Deskripsi lengkap (paragraf) -->
-          <div id="detail-description" class="mt-6 space-y-3 text-ink/80 leading-relaxed"></div>
-
-          <!-- SECTION: TABEL SPESIFIKASI -->
-          <div class="mt-6">
-            <h2 class="font-serif text-lg font-semibold text-brown mb-3">Spesifikasi</h2>
-            <dl id="detail-specifications" class="divide-y divide-brown/10 border-t border-b border-brown/10">
-              <!-- diisi oleh JS: setiap spesifikasi jadi 1 baris <div><dt>label</dt><dd>value</dd></div> -->
-            </dl>
-          </div>
-
-          <!-- =========================================================== -->
-          <!-- SECTION: CTA FORM INQUIRY                                    -->
-          <!-- Form sederhana untuk klien menanyakan / memesan item ini.    -->
-          <!-- Submit di-handle via JS -> mockSubmitInquiry() (data-mock.js) -->
-          <!-- =========================================================== -->
-          <div class="mt-8 p-5 md:p-6 rounded-2xl bg-brown/5 border border-brown/10">
-            <h2 class="font-serif text-lg font-semibold text-brown mb-1">Tertarik dengan desain ini?</h2>
-            <p class="text-sm text-muted mb-4">Isi form di bawah, tim kami akan menghubungi kamu untuk proses pembelian.</p>
-
-            <form id="inquiry-form" class="space-y-3">
-              <!-- Hidden field: menyimpan slug item yang sedang dilihat, dikirim bersama payload -->
-              <input type="hidden" id="inquiry-item-slug" name="itemSlug" value="" />
-
-              <div>
-                <label for="inquiry-name" class="block text-xs font-semibold text-ink/70 mb-1">Nama Lengkap</label>
-                <input type="text" id="inquiry-name" name="name" required placeholder="Nama kamu"
-                  class="w-full rounded-lg border border-brown/20 bg-white px-4 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brown/30" />
-              </div>
-
-              <div>
-                <label for="inquiry-contact" class="block text-xs font-semibold text-ink/70 mb-1">Email / No. WhatsApp</label>
-                <input type="text" id="inquiry-contact" name="contact" required placeholder="email@contoh.com atau 08xxxxxxxxxx"
-                  class="w-full rounded-lg border border-brown/20 bg-white px-4 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brown/30" />
-              </div>
-
-              <div>
-                <label for="inquiry-message" class="block text-xs font-semibold text-ink/70 mb-1">Pesan (opsional)</label>
-                <textarea id="inquiry-message" name="message" rows="3" placeholder="Ceritakan kebutuhan kamu..."
-                  class="w-full rounded-lg border border-brown/20 bg-white px-4 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brown/30"></textarea>
-              </div>
-
-              <button type="submit" id="inquiry-submit-btn"
-                class="w-full rounded-pill bg-brown text-cream text-sm font-semibold py-3 hover:bg-ink transition-colors">
-                Kirim Pertanyaan
-              </button>
-
-              <!-- Status pengiriman form (sukses/loading), disembunyikan default -->
-              <p id="inquiry-status" class="hidden text-sm font-medium text-center pt-1"></p>
-            </form>
-          </div>
-        </div>
+  <!-- 2. Card Format & Ukuran (Samping-sampingan) -->
+    <div style="display: flex; gap: 12px; width: 100%;">
+    <div class="p-4 rounded-2xl border border-brown/15 bg-white flex items-center gap-3 shadow-sm" style="flex: 1;">
+      <div class="p-2.5 rounded-xl bg-brown/5 text-brown shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
       </div>
+      <div>
+        <p class="text-xs text-muted font-medium">Format</p>
+        <p id="detail-format" class="text-sm font-semibold text-ink uppercase mt-0.5">-</p>
+      </div>
+    </div>
 
-      <!-- =============================================================== -->
+    <div class="p-4 rounded-2xl border border-brown/15 bg-white flex items-center gap-3 shadow-sm" style="flex: 1;">
+      <div class="p-2.5 rounded-xl bg-brown/5 text-brown shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-xs text-muted font-medium">Ukuran</p>
+        <p id="detail-size" class="text-sm font-semibold text-ink mt-0.5">-</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Card Desainer & Peran (Samping-sampingan) -->
+  <div style="display: flex; gap: 12px; width: 100%;">
+    <div class="p-4 rounded-2xl border border-brown/15 bg-white flex items-center gap-3 shadow-sm" style="flex: 1;">
+      <div class="p-2.5 rounded-xl bg-brown/5 text-brown shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-xs text-muted font-medium">Desainer</p>
+        <p id="detail-designer" class="text-sm font-semibold text-ink mt-0.5">-</p>
+      </div>
+    </div>
+
+    <div class="p-4 rounded-2xl border border-brown/15 bg-white flex items-center gap-3 shadow-sm" style="flex: 1;">
+      <div class="p-2.5 rounded-xl bg-brown/5 text-brown shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-xs text-muted font-medium">Role Desainer</p>
+        <p id="detail-role" class="text-sm font-semibold text-ink mt-0.5">-</p>
+      </div>
+    </div>
+  </div>
+</div>  
+
+    <!-- Tombol Aksi (Keranjang & Beli Sekarang) -->
+    <div id="detail-actions" class="my-6" style="display: flex; gap: 12px; width: 100%; align-items: center;">
+      <!-- Diisi oleh catalog.js -->
+    </div>
+
+    <!-- Informasi Keamanan & Pengunduhan -->
+    <ul class="mt-6 space-y-2.5 text-xs text-muted">
+      <li class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-brown shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Akses link Google Drive setelah pembayaran
+      </li>
+      <li class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-brown shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        File dapat diunduh kapan saja dari halaman akun
+      </li>
+    </ul>
+  </div>
+
+    <!-- =============================================================== -->
       <!-- SECTION: RELATED ITEMS                                          -->
       <!-- Menampilkan item lain yang berkaitan (kategori sama / fallback)  -->
       <!-- =============================================================== -->
-      <div class="mt-14 md:mt-20">
-        <h2 class="font-serif text-2xl md:text-3xl font-bold text-brown mb-6">Kamu Mungkin Juga Suka</h2>
+      <div class="mt-3 md:mt-3">
+        <h2 class="font-serif text-lg md:text-xl font-bold text-brown mb-4">Kamu Mungkin Juga Suka</h2>
         <div id="related-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           <!-- diisi oleh JS: renderRelatedItems() -->
         </div>
@@ -250,7 +240,7 @@
 
 
   <!-- ================================================================= -->
-  <!-- FOOTER — sama persis dengan index.html                            -->
+  <!-- FOOTER                                                            -->
   <!-- ================================================================= -->
   <footer id="contact" class="bg-brown text-cream mt-12 md:mt-16">
     <div class="max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-14 grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
@@ -290,10 +280,10 @@
 
 
   <!-- ================================================================= -->
-  <!-- SCRIPTS                                                            -->
+  <!-- SCRIPTS                                                           -->
   <!-- ================================================================= -->
 
-  <!-- Mobile menu toggle logic (identik dengan index.html) -->
+  <!-- Mobile menu toggle logic -->
   <script>
     const menuToggle = document.getElementById("mobile-menu-toggle");
     const mobileMenu = document.getElementById("mobile-menu");
@@ -320,327 +310,8 @@
     });
   </script>
 
-  <!-- Data layer: berisi ZH_CATALOG, mockFetchList(), mockFetchDetail(), dll -->
-  <script src="js/data-mock.js"></script>
-
-  <!--
-    ===================================================================
-    SCRIPT UTAMA HALAMAN CATALOG — ROUTING & RENDERING (Vanilla JS)
-    ===================================================================
-    Konsep kerja halaman ini (Master-Detail dalam SATU file HTML):
-
-    1. Halaman ini punya 2 "state" tampilan: LIST VIEW dan DETAIL VIEW.
-    2. State ditentukan dari query string URL: ?slug=xxx
-         - Tidak ada ?slug           -> tampilkan LIST VIEW
-         - Ada ?slug=nama-item       -> tampilkan DETAIL VIEW item tsb.
-    3. Saat user klik card di grid, kita TIDAK reload halaman. Kita pakai
-       History API (history.pushState) untuk mengubah URL browser,
-       lalu memanggil ulang fungsi render() secara manual untuk
-       menampilkan Detail View — mirip pola Single Page App (SPA) tapi
-       tetap dalam 1 file catalog.html (bukan digabung ke index.html).
-    4. Tombol back/forward browser tetap berfungsi karena kita dengarkan
-       event 'popstate' dan panggil ulang render().
-    ===================================================================
-  -->
-  <script>
-    // Konstanta nama koleksi data yang dipakai fungsi generik di data-mock.js
-    const COLLECTION_TYPE = "catalog";
-
-    // -----------------------------------------------------------------
-    // FUNCTION: getSlugFromUrl()
-    // Membaca query parameter "slug" dari URL saat ini.
-    // Contoh: catalog.html?slug=japandi-kitchen-set -> "japandi-kitchen-set"
-    // Return null jika tidak ada slug di URL (berarti mode List View).
-    // -----------------------------------------------------------------
-    function getSlugFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("slug"); // null jika tidak ada
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: navigateToSlug(slug)
-    // Dipanggil saat user klik card (list -> detail) atau klik related
-    // item (detail -> detail lain). Mengubah URL tanpa reload halaman,
-    // lalu memanggil render() untuk update tampilan.
-    // -----------------------------------------------------------------
-    function navigateToSlug(slug) {
-      const newUrl = slug ? `catalog.html?slug=${encodeURIComponent(slug)}` : "catalog.html";
-      history.pushState({ slug: slug || null }, "", newUrl);
-      render();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: renderBreadcrumb(item)
-    // Menyusun ulang breadcrumb sesuai mode aktif.
-    // item = null -> mode List View -> "Home / Catalog"
-    // item = {title} -> mode Detail View -> "Home / Catalog / [title]"
-    // -----------------------------------------------------------------
-    function renderBreadcrumb(item) {
-      const breadcrumb = document.getElementById("breadcrumb");
-      const sep = '<span class="text-brown/30">/</span>';
-
-      let html = `<a href="index.html" class="hover:text-brown transition-colors">Home</a> ${sep} `;
-
-      if (!item) {
-        // Mode List View: "Catalog" jadi item terakhir (tidak diberi link)
-        html += `<span class="text-brown font-semibold">Catalog</span>`;
-      } else {
-        // Mode Detail View: "Catalog" jadi link kembali ke list, lalu judul item
-        html += `<a href="catalog.html" data-nav-list class="hover:text-brown transition-colors">Catalog</a> ${sep} `;
-        html += `<span class="text-brown font-semibold truncate max-w-[220px] md:max-w-none">${item.title}</span>`;
-      }
-
-      breadcrumb.innerHTML = html;
-
-      // Pasang event listener ke link "Catalog" di breadcrumb supaya balik
-      // ke List View tanpa reload (konsisten dengan tombol "Kembali").
-      const listLink = breadcrumb.querySelector("[data-nav-list]");
-      if (listLink) {
-        listLink.addEventListener("click", function (e) {
-          e.preventDefault();
-          navigateToSlug(null);
-        });
-      }
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: buildCardHTML(item)
-    // Menghasilkan markup HTML untuk 1 card produk (dipakai baik di
-    // Grid List View utama maupun di Related Items).
-    // -----------------------------------------------------------------
-    function buildCardHTML(item) {
-      return `
-        <article
-          class="group cursor-pointer rounded-2xl overflow-hidden bg-white border border-brown/10 hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
-          data-slug="${item.slug}"
-        >
-          <!-- Thumbnail gambar produk -->
-          <div class="aspect-[4/3] overflow-hidden bg-brown/5">
-            <img src="${item.thumbnail}" alt="${item.title}" loading="lazy"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-          </div>
-          <!-- Info produk -->
-          <div class="p-4 md:p-5">
-            <span class="font-mono text-[11px] font-semibold uppercase tracking-wide text-brown/60">${item.category}</span>
-            <h3 class="font-serif text-base md:text-lg font-semibold text-brown mt-1 leading-snug">${item.title}</h3>
-            <p class="text-sm text-muted mt-1.5 line-clamp-2">${item.shortDescription}</p>
-            <p class="font-mono text-sm md:text-base font-semibold text-ink mt-3">${zhFormatPrice(item.price)}</p>
-          </div>
-        </article>
-      `;
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: attachCardClickHandlers(container)
-    // Memasang event listener klik ke semua card di dalam container
-    // (delegated per-card, dipanggil setelah innerHTML di-set).
-    // -----------------------------------------------------------------
-    function attachCardClickHandlers(container) {
-      container.querySelectorAll("[data-slug]").forEach(function (card) {
-        card.addEventListener("click", function () {
-          navigateToSlug(card.getAttribute("data-slug"));
-        });
-      });
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: renderListView()
-    // Mengambil seluruh data catalog (mockFetchList) lalu merender
-    // grid card ke dalam #list-grid. Menampilkan skeleton loading
-    // selama proses "fetch" simulasi berlangsung.
-    // -----------------------------------------------------------------
-    async function renderListView() {
-      const skeleton = document.getElementById("list-skeleton");
-      const grid = document.getElementById("list-grid");
-
-      skeleton.classList.remove("hidden");
-      grid.innerHTML = "";
-
-      const items = await mockFetchList(COLLECTION_TYPE);
-
-      skeleton.classList.add("hidden");
-      grid.innerHTML = items.map(buildCardHTML).join("");
-      attachCardClickHandlers(grid);
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: renderDetailView(slug)
-    // Mengambil 1 item detail berdasarkan slug (mockFetchDetail) lalu
-    // mengisi seluruh elemen di dalam #view-detail: galeri, judul,
-    // harga, spesifikasi, deskripsi, form CTA, dan related items.
-    // -----------------------------------------------------------------
-    async function renderDetailView(slug) {
-      const item = await mockFetchDetail(COLLECTION_TYPE, slug);
-
-      // Jika slug tidak ditemukan di data, kembalikan user ke List View
-      if (!item) {
-        navigateToSlug(null);
-        return;
-      }
-
-      // Update <title> tab browser
-      document.title = `${item.title} — Zahasky Catalog`;
-
-      // --- SECTION: GALERI GAMBAR ---
-      const mainImage = document.getElementById("detail-main-image");
-      mainImage.src = item.gallery[0] || item.thumbnail;
-      mainImage.alt = item.title;
-
-      const thumbStrip = document.getElementById("detail-thumbnails");
-      thumbStrip.innerHTML = item.gallery
-        .map(function (url, idx) {
-          return `<button type="button" data-img="${url}"
-            class="rounded-lg overflow-hidden aspect-square border-2 ${idx === 0 ? "border-brown" : "border-transparent"} hover:border-brown/60 transition-colors">
-            <img src="${url}" alt="Galeri ${idx + 1}" class="w-full h-full object-cover" />
-          </button>`;
-        })
-        .join("");
-
-      // Klik thumbnail -> ganti gambar utama + tandai thumbnail aktif
-      thumbStrip.querySelectorAll("[data-img]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          mainImage.src = btn.getAttribute("data-img");
-          thumbStrip.querySelectorAll("[data-img]").forEach(function (b) {
-            b.classList.remove("border-brown");
-            b.classList.add("border-transparent");
-          });
-          btn.classList.remove("border-transparent");
-          btn.classList.add("border-brown");
-        });
-      });
-
-      // --- SECTION: INFORMASI PRODUK ---
-      document.getElementById("detail-category").textContent = item.category;
-      document.getElementById("detail-title").textContent = item.title;
-      document.getElementById("detail-price").textContent = zhFormatPrice(item.price);
-
-      document.getElementById("detail-tags").innerHTML = (item.tags || [])
-        .map(function (tag) {
-          return `<span class="text-xs font-medium text-brown/70 bg-brown/5 border border-brown/10 px-2.5 py-1 rounded-pill">${tag}</span>`;
-        })
-        .join("");
-
-      document.getElementById("detail-description").innerHTML = (item.description || [])
-        .map(function (paragraph) {
-          return `<p>${paragraph}</p>`;
-        })
-        .join("");
-
-      // --- SECTION: TABEL SPESIFIKASI ---
-      document.getElementById("detail-specifications").innerHTML = (item.specifications || [])
-        .map(function (spec) {
-          return `
-            <div class="flex items-center justify-between py-3 text-sm">
-              <dt class="text-muted">${spec.label}</dt>
-              <dd class="font-medium text-ink text-right">${spec.value}</dd>
-            </div>
-          `;
-        })
-        .join("");
-
-      // --- SECTION: CTA FORM INQUIRY — isi hidden field dengan slug aktif ---
-      document.getElementById("inquiry-item-slug").value = item.slug;
-
-      // --- SECTION: RELATED ITEMS ---
-      const relatedGrid = document.getElementById("related-grid");
-      relatedGrid.innerHTML = (item.related || []).map(buildCardHTML).join("");
-      attachCardClickHandlers(relatedGrid);
-
-      // Update breadcrumb dengan judul item aktif
-      renderBreadcrumb(item);
-    }
-
-    // -----------------------------------------------------------------
-    // FUNCTION: render()
-    // "Router" utama halaman ini. Dipanggil saat:
-    //   - halaman pertama kali dimuat
-    //   - user klik card / related item (via navigateToSlug)
-    //   - user menekan tombol back/forward browser (popstate)
-    // Menentukan apakah harus menampilkan List View atau Detail View
-    // berdasarkan ada/tidaknya query param ?slug= di URL saat ini.
-    // -----------------------------------------------------------------
-    function render() {
-      const slug = getSlugFromUrl();
-      const viewList = document.getElementById("view-list");
-      const viewDetail = document.getElementById("view-detail");
-
-      if (!slug) {
-        // ----- MODE: LIST VIEW -----
-        viewDetail.classList.add("hidden");
-        viewList.classList.remove("hidden");
-        document.title = "Catalog — Zahasky";
-        renderBreadcrumb(null);
-        renderListView();
-      } else {
-        // ----- MODE: DETAIL VIEW -----
-        viewList.classList.add("hidden");
-        viewDetail.classList.remove("hidden");
-        renderDetailView(slug);
-      }
-    }
-
-    // -----------------------------------------------------------------
-    // EVENT: Tombol "Kembali ke Catalog" pada Detail View
-    // -----------------------------------------------------------------
-    document.getElementById("btn-back-to-list").addEventListener("click", function () {
-      navigateToSlug(null);
-    });
-
-    // -----------------------------------------------------------------
-    // EVENT: Submit form CTA Inquiry
-    // Mencegah reload halaman (preventDefault), kumpulkan data form,
-    // kirim via mockSubmitInquiry(), lalu tampilkan status ke user.
-    // -----------------------------------------------------------------
-    document.getElementById("inquiry-form").addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const submitBtn = document.getElementById("inquiry-submit-btn");
-      const statusText = document.getElementById("inquiry-status");
-
-      const payload = {
-        itemSlug: document.getElementById("inquiry-item-slug").value,
-        name: document.getElementById("inquiry-name").value,
-        contact: document.getElementById("inquiry-contact").value,
-        message: document.getElementById("inquiry-message").value,
-        collectionType: COLLECTION_TYPE,
-      };
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Mengirim...";
-
-      const result = await mockSubmitInquiry(payload);
-
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Kirim Pertanyaan";
-
-      statusText.classList.remove("hidden");
-      if (result.success) {
-        statusText.textContent = "Terima kasih! Pertanyaan kamu sudah terkirim, tim kami akan segera menghubungi.";
-        statusText.className = "text-sm font-medium text-center pt-1 text-green-700";
-        e.target.reset();
-        document.getElementById("inquiry-item-slug").value = payload.itemSlug; // slug tetap dipertahankan
-      } else {
-        statusText.textContent = "Maaf, terjadi kesalahan. Silakan coba lagi.";
-        statusText.className = "text-sm font-medium text-center pt-1 text-red-700";
-      }
-    });
-
-    // -----------------------------------------------------------------
-    // EVENT: popstate — ditrigger saat user menekan tombol back/forward
-    // browser. Kita panggil ulang render() supaya tampilan sinkron
-    // dengan URL yang sedang aktif (List View / Detail View item lain).
-    // -----------------------------------------------------------------
-    window.addEventListener("popstate", render);
-
-    // -----------------------------------------------------------------
-    // INISIALISASI: jalankan render() pertama kali saat halaman dimuat,
-    // supaya jika user membuka link langsung berupa
-    // catalog.html?slug=xxx (misal dari share link / bookmark),
-    // Detail View langsung tampil tanpa perlu klik apa pun.
-    // -----------------------------------------------------------------
-    render();
-  </script>
+  <!-- Panggil JS Utama Halaman Catalog -->
+  <script src="./assets/js/catalog.js"></script>
 
 </body>
 </html>
