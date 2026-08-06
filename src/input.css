@@ -1,7 +1,5 @@
 /**
  * ZAHASKY — Tailwind Source File
- * Ini "bahan mentah"-nya. Jangan di-link langsung ke HTML.
- * Jalankan `npm run build:css` untuk generate public/tailwind.css dari file ini.
  */
 @tailwind base;
 @tailwind components;
@@ -21,38 +19,41 @@ body {
 /* Custom Component Classes */
 @layer components {
   /* --- NAVBAR NAVIGATION --- */
-  /* Link Navbar Biasa (Belum Aktif) */
   .nav-link {
     @apply text-gray-400 font-medium transition-colors duration-200 hover:text-brown/70;
   }
 
-  /* Link Navbar Aktif (Halaman Saat Ini) */
   .nav-link-active {
     @apply text-brown font-semibold transition-colors duration-200 hover:text-brown/70;
   }
 
   /* --- FORM & BUTTON COMPONENTS --- */
-  /* Helper class untuk tombol pill/oval */
   .rounded-pill {
     border-radius: 9999px;
   }
 
-  /* Label pada Form Input */
   .field-label {
     @apply block text-sm font-semibold text-ink/90 mb-1.5;
   }
 
-  /* Style Input Text/Email/Password */
   .field-input {
     @apply w-full px-4 py-3 text-sm text-ink bg-white border border-gray-200 rounded-2xl 
            placeholder:text-gray-400 focus:outline-none focus:border-brown focus:ring-1 focus:ring-brown 
            transition-all duration-200;
   }
 
-  /* Tombol Cokelat Utama (Daftar / Masuk) */
   .btn-primary {
     @apply w-full py-3.5 px-6 rounded-full bg-brown text-cream text-base font-semibold 
            hover:bg-ink active:scale-[0.99] transition-all duration-200 shadow-sm cursor-pointer;
+  }
+
+  /* --- PROFILE COMPONENTS --- */
+  .tab-btn {
+    @apply px-5 py-2.5 text-sm font-medium text-gray-400 border-b-2 border-transparent transition-all hover:text-brown cursor-pointer;
+  }
+
+  .tab-btn-active {
+    @apply text-brown border-brown font-semibold;
   }
 
   /* --- PLACEHOLDER COMPONENTS --- */
