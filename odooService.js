@@ -51,6 +51,7 @@ async function getProducts() {
                         'x_designer_name', 
                         'x_designer_role', 
                         'x_file_format', 
+                        'x_stock',
                         'x_file_size'
                     ], 
                     limit: 100 
@@ -90,6 +91,7 @@ async function getProductById(productId) {
                     'x_designer_name', 
                     'x_designer_role', 
                     'x_file_format', 
+                    'x_stock', 
                     'x_file_size'
                 ] 
             }
