@@ -353,7 +353,8 @@ async function addToCart(productId) {
   if (product) {
     const productData = {
       ...product,
-      image_url: imageUrl || product.image_url
+      image_url: imageUrl || product.image_url,
+      page_type: "catalog"
     };
     
     // Panggil fungsi global dari cart-helper.js

@@ -91,6 +91,7 @@ function addToCartGlobal(product) {
       price: product.list_price,
       image_url: product.image_url,
       file_format: product.x_file_format || "ZIP",
+      page_type: product.page_type || product.type || "catalog", // <--- Tambahkan baris ini
       quantity: 1
     });
   }

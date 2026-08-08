@@ -41,6 +41,19 @@ function renderCartPage() {
     const itemTotal = item.price * item.quantity;
     const isChecked = selectedItems.has(item.id) ? "checked" : "";
 
+    // LOGIKA PENENTU LINK DETAIL PRODUK
+    let targetPage = "catalog.html"; // Default fallback jika tidak terdeteksi
+
+    const itemType = (item.page_type || item.type || item.category || "").toLowerCase();
+
+    if (itemType.includes("package")) {
+      targetPage = "package.html";
+    } else if (itemType.includes("publicity") || itemType.includes("jurnal")) {
+      targetPage = "publicity.html";
+    } else if (itemType.includes("catalog")) {
+      targetPage = "catalog.html";
+    }
+
     return `
       <div class="px-4 py-4 md:px-6 md:py-5 flex flex-col md:grid cart-table-grid gap-4 items-center bg-white">
         
@@ -53,18 +66,17 @@ function renderCartPage() {
                  class="item-checkbox w-4 h-4 accent-brown cursor-pointer" />
         </div>
 
-        <!-- PRODUK -->
-        <div class="flex items-center gap-4 w-full">
-          <img src="${item.image_url}" alt="${item.name}" 
-               class="w-16 h-16 md:w-20 md:h-20 object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none" 
+        <!-- PRODUK (Bisa Diklik ke Detail Produk) -->
+        <a href="${targetPage}?id=${item.id}" class="flex items-center gap-4 w-full group hover:opacity-80 transition-opacity">          <img src="${item.image_url}" alt="${item.name}" 
+               class="w-16 h-16 md:w-20 md:h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none group-hover:border-brown/40 transition-colors" 
                onerror="this.src='https://via.placeholder.com/80?text=No+Image'"/>
           <div class="flex-1 min-w-0">
-            <h3 class="font-serif font-semibold text-brown text-sm md:text-base leading-snug truncate">${item.name}</h3>
+            <h3 class="font-serif font-semibold text-brown text-sm md:text-base leading-snug truncate group-hover:underline">${item.name}</h3>
             <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase bg-brown/10 text-brown rounded-none">
               ${item.file_format || "ZIP"}
             </span>
           </div>
-        </div>
+        </a>
 
         <!-- HARGA SATUAN -->
         <div class="text-left md:text-left text-xs md:text-sm text-ink w-full md:w-auto flex justify-between md:block">

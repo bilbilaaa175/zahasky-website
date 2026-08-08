@@ -279,6 +279,7 @@ async function renderDetailView(id) {
         elStock.textContent = "-";
       }
     }    
+
     const elActions = document.getElementById("detail-actions");
     if (elActions) {
       elActions.innerHTML = `
@@ -341,8 +342,35 @@ function render() {
   }
 }
 
-function addToCart(productId) {
-  alert(`Produk ID ${productId} ditambahkan ke keranjang!`);
+async function addToCart(productId) {
+  // 1. Cari produk dari state global
+  let product = allProducts.find(p => p.id === productId);
+
+  // 2. Jika tidak ada di state global (misal saat buka halaman detail langsung), ambil dari API
+  if (!product) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+      const data = await res.json();
+      if (data.success) product = data.product;
+    } catch (err) {
+      console.error("Gagal mengambil data produk:", err);
+    }
+  }
+
+  // 3. Ambil URL gambar langsung dari tampilan detail jika ada
+  const mainImgEl = document.getElementById("detail-main-image");
+  const imageUrl = (mainImgEl && mainImgEl.src) ? mainImgEl.src : (product ? product.image_url : "");
+
+  if (product) {
+    const productData = {
+      ...product,
+      image_url: imageUrl || product.image_url,
+      page_type: "publicity"
+    };
+    
+    // Panggil fungsi global dari cart-helper.js
+    addToCartGlobal(productData);
+  }
 }
 
 function buyNow(productId) {
