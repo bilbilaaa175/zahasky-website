@@ -56,6 +56,15 @@ body {
     @apply text-brown border-brown font-semibold;
   }
 
+  /* --- CONTACT COMPONENTS --- */
+  .contact-card {
+    @apply flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-white hover:border-brown/30 hover:shadow-sm transition-all duration-200;
+  }
+
+  .contact-icon-wrapper {
+    @apply w-12 h-12 shrink-0 rounded-full bg-brown/10 flex items-center justify-center text-brown;
+  }
+
   /* --- PLACEHOLDER COMPONENTS --- */
   .placeholder-section {
     @apply relative border-2 border-dashed border-brown/30 bg-brown/5 rounded-3xl items-center justify-center p-8;
