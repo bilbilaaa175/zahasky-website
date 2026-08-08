@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Catalog — Zahasky</title>
+  <title>Catalog</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -106,34 +106,33 @@
       <div class="mt-6 mb-8 flex flex-col md:flex-row items-center gap-3 w-full"> 
         
         <!-- Search Input Container -->
-        <div style="position: relative; display: flex; align-items: center;" class="w-full md:w-56 shrink-0">
-          <svg style="width:16px; height:16px; position: absolute; left: 14px; pointer-events: none; color: #a1a1aa; z-index: 10;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-full md:w-56 shrink-0 relative flex items-center">
+          <svg class="absolute left-3.5 md:left-4 w-4 h-4 pointer-events-none text-muted/50 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
           <input 
             type="text" 
             id="search-input" 
             placeholder="Cari produk..." 
-            style="padding-left: 38px !important; width: 100%;" 
-            class="py-2.5 pr-4 rounded-full border border-brown/15 bg-white text-xs md:text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:border-brown transition-colors shadow-none"
+            class="w-full py-2 md:py-2.5 pl-10 md:pl-11 pr-3 md:pr-4 rounded-full border border-brown/15 bg-white text-xs md:text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:border-brown transition-colors shadow-none"
           />
         </div>
 
-        <!-- Filter Kategori Buttons (Ditambahkan flex-1 text-center agar membagi rata sisa ruang ke kanan) -->
-        <div class="flex-1 flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full" id="category-filters">
-          <button type="button" data-category="ALL" class="flex-1 text-center filter-btn active rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-brown text-cream border border-brown transition-all whitespace-nowrap shadow-none">
+        <!-- Filter Kategori Buttons -->
+        <div class="flex-1 flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full" id="category-filters">
+          <button type="button" data-category="ALL" class="filter-btn active rounded-full px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-brown text-cream border border-brown transition-all whitespace-nowrap shadow-none flex-shrink-0">
             Semua
           </button>
-          <button type="button" data-category="Kursi" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+          <button type="button" data-category="Kursi" class="filter-btn rounded-full px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none flex-shrink-0">
             Kursi
           </button>
-          <button type="button" data-category="Meja" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+          <button type="button" data-category="Meja" class="filter-btn rounded-full px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none flex-shrink-0">
             Meja
           </button>
-          <button type="button" data-category="Lemari" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+          <button type="button" data-category="Lemari" class="filter-btn rounded-full px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none flex-shrink-0">
             Lemari
           </button>
-          <button type="button" data-category="Sofa" class="flex-1 text-center filter-btn rounded-full px-5 py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none">
+          <button type="button" data-category="Sofa" class="filter-btn rounded-full px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-white text-muted border border-brown/15 hover:border-brown transition-all whitespace-nowrap shadow-none flex-shrink-0">
             Sofa
           </button>
         </div>
@@ -157,11 +156,11 @@
 
       <button id="btn-back-to-list" type="button" class="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-brown hover:text-ink transition-colors"></button>
   
-      <div id="detail-content" class="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-14">
+      <div id="detail-content" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-10 lg:gap-14">
 
         <!-- GALERI GAMBAR (KIRI) -->
         <div>
-          <div class="rounded-2xl overflow-hidden bg-brown/5 aspect-[4/3]">
+          <div class="rounded-2xl overflow-hidden bg-brown/5 aspect-square md:aspect-[4/3]">
             <img id="detail-main-image" src="" alt="" class="w-full h-full object-cover" />
           </div>
         </div>
@@ -176,6 +175,10 @@
 
     <!-- Harga -->
     <p id="detail-price" class="font-mono text-2xl md:text-3xl font-bold text-brown mt-2"></p>
+
+     <!-- Deskripsi Produk -->
+    <p id="detail-description" class="text-sm text-muted mt-3 leading-relaxed"></p>
+
 
     <!-- KELOMPOK KARTU SPESIFIKASI & INFORMASI -->
   <div class="space-y-3 mt-6">
@@ -348,7 +351,8 @@
     });
   </script>
 
-  <!-- Panggil JS Utama Halaman Catalog -->
+  <!-- Panggil JS Helper Keranjang & JS Utama Halaman Catalog -->
+  <script src="./assets/js/cart-helper.js"></script>
   <script src="./assets/js/catalog.js"></script>
 
 </body>

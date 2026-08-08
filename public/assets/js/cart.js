@@ -1,0 +1,196 @@
+// public/assets/js/cart.js
+
+// Status simpan id item yang dicentang
+let selectedItems = new Set();
+
+function formatRupiah(amount) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0
+  }).format(amount || 0);
+}
+
+function renderCartPage() {
+  const cart = getCart();
+  const emptyView = document.getElementById("cart-empty");
+  const contentView = document.getElementById("cart-content");
+  const itemsContainer = document.getElementById("cart-items-list");
+
+  if (!cart || cart.length === 0) {
+    if (emptyView) {
+      emptyView.classList.remove("hidden");
+      emptyView.classList.add("flex");
+    }
+    if (contentView) {
+      contentView.classList.add("hidden");
+      contentView.classList.remove("flex");
+    }
+    return;
+  }
+
+  if (emptyView) emptyView.classList.add("hidden");
+  if (contentView) contentView.classList.remove("hidden");
+
+  // Secara default jika pertama kali buka, centang semua item
+  if (selectedItems.size === 0 && cart.length > 0) {
+    cart.forEach(item => selectedItems.add(item.id));
+  }
+
+  itemsContainer.innerHTML = cart.map((item) => {
+    const itemTotal = item.price * item.quantity;
+    const isChecked = selectedItems.has(item.id) ? "checked" : "";
+
+    return `
+      <div class="px-4 py-4 md:px-6 md:py-5 flex flex-col md:grid cart-table-grid gap-4 items-center bg-white">
+        
+        <!-- CHECKBOX ITEM -->
+        <div class="flex items-center justify-start">
+          <input type="checkbox" 
+                 value="${item.id}" 
+                 ${isChecked} 
+                 onchange="toggleItemSelect(${item.id}, this.checked)" 
+                 class="item-checkbox w-4 h-4 accent-brown cursor-pointer" />
+        </div>
+
+        <!-- PRODUK -->
+        <div class="flex items-center gap-4 w-full">
+          <img src="${item.image_url}" alt="${item.name}" 
+               class="w-16 h-16 md:w-20 md:h-20 object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none" 
+               onerror="this.src='https://via.placeholder.com/80?text=No+Image'"/>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-serif font-semibold text-brown text-sm md:text-base leading-snug truncate">${item.name}</h3>
+            <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase bg-brown/10 text-brown rounded-none">
+              ${item.file_format || "ZIP"}
+            </span>
+          </div>
+        </div>
+
+        <!-- HARGA SATUAN -->
+        <div class="text-left md:text-left text-xs md:text-sm text-ink w-full md:w-auto flex justify-between md:block">
+          <span class="md:hidden text-muted">Harga Satuan:</span>
+          <span>${formatRupiah(item.price)}</span>
+        </div>
+
+        <!-- KUANTITAS (Dibuat Tidak Berdempetan) -->
+        <div class="flex items-left justify-between md:justify-left w-full md:w-auto">
+          <span class="md:hidden text-xs text-muted">Kuantitas:</span>
+          <div class="flex items-center border border-brown/20 bg-white rounded-none">
+            <button type="button" onclick="updateQty(${item.id}, -1)" class="w-8 h-8 text-base font-semibold text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-r border-brown/20">-</button>
+            <span class="w-12 text-center text-xs font-mono font-semibold">${item.quantity}</span>
+            <button type="button" onclick="updateQty(${item.id}, 1)" class="w-8 h-8 text-base font-semibold text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-l border-brown/20">+</button>
+          </div>
+        </div>
+
+        <!-- TOTAL HARGA -->
+        <div class="text-left md:text-left font-mono text-xs md:text-sm font-bold text-brown w-full md:w-auto flex justify-between md:block">
+          <span class="md:hidden text-muted font-normal font-sans">Total Harga:</span>
+          <span>${formatRupiah(itemTotal)}</span>
+        </div>
+
+        <!-- AKSI -->
+        <div class="text-left w-full md:w-auto flex justify-between">
+          <button type="button" onclick="removeItem(${item.id})" class="text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors">
+            Hapus
+          </button>
+        </div>
+
+      </div>
+    `;
+  }).join("");
+
+  updateSummary();
+}
+
+function updateSummary() {
+  const cart = getCart();
+  let selectedCount = 0;
+  let totalPrice = 0;
+
+  cart.forEach(item => {
+    if (selectedItems.has(item.id)) {
+      selectedCount += item.quantity;
+      totalPrice += item.price * item.quantity;
+    }
+  });
+
+  const totalCartItemsCount = document.getElementById("total-cart-items-count");
+  const summarySelectedCount = document.getElementById("summary-selected-count");
+  const summaryPrice = document.getElementById("summary-total-price");
+  const checkAllHeader = document.getElementById("check-all-header");
+  const checkAllFooter = document.getElementById("check-all-footer");
+
+  if (totalCartItemsCount) totalCartItemsCount.textContent = cart.length;
+  if (summarySelectedCount) summarySelectedCount.textContent = selectedCount;
+  if (summaryPrice) summaryPrice.textContent = formatRupiah(totalPrice);
+
+  const isAllChecked = cart.length > 0 && selectedItems.size === cart.length;
+  if (checkAllHeader) checkAllHeader.checked = isAllChecked;
+  if (checkAllFooter) checkAllFooter.checked = isAllChecked;
+}
+
+function toggleItemSelect(id, isChecked) {
+  if (isChecked) {
+    selectedItems.add(id);
+  } else {
+    selectedItems.delete(id);
+  }
+  updateSummary();
+}
+
+function toggleSelectAll(isChecked) {
+  const cart = getCart();
+  if (isChecked) {
+    cart.forEach(item => selectedItems.add(item.id));
+  } else {
+    selectedItems.clear();
+  }
+  renderCartPage();
+}
+
+function updateQty(id, change) {
+  let cart = getCart();
+  const index = cart.findIndex((item) => item.id === id);
+  if (index > -1) {
+    cart[index].quantity += change;
+    if (cart[index].quantity <= 0) {
+      cart.splice(index, 1);
+      selectedItems.delete(id);
+    }
+    localStorage.setItem("zahasky_cart", JSON.stringify(cart));
+    if (typeof updateCartBadge === "function") updateCartBadge();
+    renderCartPage();
+  }
+}
+
+function removeItem(id) {
+  let cart = getCart();
+  cart = cart.filter((item) => item.id !== id);
+  selectedItems.delete(id);
+  localStorage.setItem("zahasky_cart", JSON.stringify(cart));
+  if (typeof updateCartBadge === "function") updateCartBadge();
+  renderCartPage();
+}
+
+function deleteSelectedItems() {
+  if (selectedItems.size === 0) {
+    alert("Pilih minimal satu produk untuk dihapus.");
+    return;
+  }
+  let cart = getCart();
+  cart = cart.filter((item) => !selectedItems.has(item.id));
+  selectedItems.clear();
+  localStorage.setItem("zahasky_cart", JSON.stringify(cart));
+  if (typeof updateCartBadge === "function") updateCartBadge();
+  renderCartPage();
+}
+
+function checkout() {
+  if (selectedItems.size === 0) {
+    alert("Silakan pilih minimal satu produk untuk di-checkout!");
+    return;
+  }
+  alert("Melanjutkan ke proses checkout...");
+}
+
+document.addEventListener("DOMContentLoaded", renderCartPage);

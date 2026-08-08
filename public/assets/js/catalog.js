@@ -1,10 +1,10 @@
 // js/catalog.js
-const API_BASE_URL = "/api";
+var API_BASE_URL = window.API_BASE_URL || "/api";
 
-// --- STATE GLOBAL UNTUK FILTERING ---
-let allProducts = [];        // Menyimpan seluruh data produk mentah yang didapat dari API
-let currentCategory = "ALL"; // Menyimpan kategori yang sedang dipilih (default: ALL)
-let currentSearchQuery = ""; // Menyimpan kata kunci pencarian yang sedang diketik (default: kosong)
+// --- STATE GLOBAL UNTUK FILTERING (Menggunakan window object agar tidak error saat reload) ---
+window.allProducts = window.allProducts || [];
+var currentCategory = "ALL";
+var currentSearchQuery = "";
 
 // --- FUNGSI UTILITAS FORMAT UANG & NAVIGASI ---
 function formatRupiah(amount) {
@@ -251,9 +251,10 @@ async function renderDetailView(id) {
     if (elTitle) elTitle.textContent = product.name;
     if (elPrice) elPrice.textContent = formatRupiah(product.list_price);
 
+    // Deskripsi Produk (Langsung teks paragraf)
     const elDesc = document.getElementById("detail-description");
     if (elDesc) {
-      elDesc.innerHTML = `<p>${product.x_product_description || 'File desain interior kualitas tinggi siap pakai.'}</p>`;
+      elDesc.textContent = product.x_product_description || "Deskripsi produk tidak tersedia.";
     }
 
     const elSeries = document.getElementById("detail-series");
@@ -330,8 +331,34 @@ function render() {
   }
 }
 
-function addToCart(productId) {
-  alert(`Produk ID ${productId} ditambahkan ke keranjang!`);
+async function addToCart(productId) {
+  // 1. Cari produk dari state global
+  let product = allProducts.find(p => p.id === productId);
+
+  // 2. Jika tidak ada di state global (misal saat buka halaman detail langsung), ambil dari API
+  if (!product) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+      const data = await res.json();
+      if (data.success) product = data.product;
+    } catch (err) {
+      console.error("Gagal mengambil data produk:", err);
+    }
+  }
+
+  // 3. Ambil URL gambar langsung dari tampilan detail jika ada
+  const mainImgEl = document.getElementById("detail-main-image");
+  const imageUrl = (mainImgEl && mainImgEl.src) ? mainImgEl.src : (product ? product.image_url : "");
+
+  if (product) {
+    const productData = {
+      ...product,
+      image_url: imageUrl || product.image_url
+    };
+    
+    // Panggil fungsi global dari cart-helper.js
+    addToCartGlobal(productData);
+  }
 }
 
 function buyNow(productId) {

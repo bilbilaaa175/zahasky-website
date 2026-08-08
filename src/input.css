@@ -30,3 +30,97 @@ body {
 #mobile-menu.is-open {
   display: flex;
 }
+
+/* Custom Styles Keranjang Belanja Zahasky */
+@layer components {
+  /* CSS Grid Khusus Layar Desktop (md ke atas) */
+  @media (min-width: 768px) {
+    .cart-table-grid {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 5fr) 2fr 2fr 2fr 1.5fr;
+      align-items: center;
+    }
+  }
+
+  /* Kuantitas Button */
+  .qty-btn {
+    @apply w-7 h-7 md:w-8 md:h-8 text-sm md:text-base font-medium text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-brown/30;
+  }
+
+  /* Gambar Produk Kotak 1:1 */
+  .cart-item-img {
+    @apply w-16 h-16 md:w-20 md:h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none;
+  }
+
+  /* Tombol Checkout Responsif */
+  .btn-checkout {
+    @apply bg-brown text-cream text-xs md:text-base font-bold px-6 md:px-10 h-10 md:h-14 hover:bg-ink transition-colors rounded-none shadow-none flex items-center justify-center shrink-0;
+  }
+}
+
+@layer components {
+  /* Grid Desktop */
+  @media (min-width: 768px) {
+    .cart-table-grid {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 5fr) 2fr 2fr 2fr 1.5fr;
+      align-items: center;
+    }
+  }
+
+  .cart-item-img {
+    @apply w-20 h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none;
+  }
+}
+
+/* Tambahkan di input.css */
+.cart-item-row {
+  @apply flex justify-between items-center py-2 px-0 md:contents;
+}
+
+.cart-item-label {
+  @apply text-xs text-muted font-normal md:hidden;
+}
+
+.cart-item-value {
+  @apply text-xs md:text-sm text-ink md:text-left;
+}
+
+/* Mobile specific - Cart Item */
+@media (max-width: 767px) {
+  .cart-table-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Setiap row di mobile jadi full-width dengan label */
+  .cart-item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(68, 27, 7, 0.05);
+  }
+
+  .cart-item-row:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Bottom bar - adjustments */
+@media (max-width: 767px) {
+  /* Tambah padding bottom untuk tidak tertutup fixed bar */
+  #cart-items-list {
+    padding-bottom: 1rem;
+  }
+
+  /* Hapus 'Total (X produk)' text di mobile untuk hemat space */
+  .summary-label {
+    display: none;
+  }
+
+  .summary-label.mobile-show {
+    display: inline !important;
+    font-size: 0.75rem;
+  }
+}
