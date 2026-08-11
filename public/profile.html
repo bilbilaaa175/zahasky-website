@@ -153,7 +153,7 @@
     <div class="flex border-b border-gray-200 mb-8 overflow-x-auto">
       <button type="button" id="tab-btn-info" class="tab-btn tab-btn-active">Data Profil</button>
       <button type="button" id="tab-btn-security" class="tab-btn">Keamanan Akun</button>
-      <button type="button" id="tab-btn-orders" class="tab-btn">Pesanan Saya (0)</button>
+      <button type="button" id="tab-btn-orders" class="tab-btn">Riwayat Pesanan <span id="orders-count-badge">(0)</span></button>
     </div>
 
     <!-- TAB 1: DATA PROFIL -->
@@ -206,24 +206,32 @@
       </form>
     </section>
 
-    <!-- TAB 3: PESANAN SAYA -->
+    <!-- TAB 3: RIWAYAT PESANAN -->
     <section id="tab-content-orders" class="hidden">
-      <div class="placeholder-section flex flex-col min-h-[260px] text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-brown/40 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      
+      <!-- Container jika BELUM ADA pesanan (Default State) -->
+      <div id="empty-orders-state" class="flex flex-col items-center justify-center min-h-[260px] text-center bg-white border border-gray-100 shadow-sm rounded-3xl p-8">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-brown/40 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
         </svg>
-        <p class="font-serif text-base font-semibold text-brown/80 mb-1">Belum Ada Pesanan</p>
-        <p class="text-xs text-gray-500 mb-5">Anda belum pernah membeli file desain di Zahasky.</p>
+        <h3 class="font-serif text-lg font-bold text-brown/90 mb-1">Belum Ada Riwayat Pesanan</h3>
+        <p class="text-xs text-gray-500 mb-6">Anda belum pernah melakukan checkout file desain digital di Zahasky.</p>
         <a href="catalog.html">
           <button type="button" class="btn-primary md:w-auto px-6 py-2.5 text-xs">Jelajahi Katalog</button>
         </a>
       </div>
+
+      <!-- Container jika SUDAH ADA pesanan (Dinamis dirender via JS) -->
+      <div id="orders-list-container" class="hidden space-y-4">
+        <!-- Item kartu pesanan akan masuk ke sini melalui Javascript -->
+      </div>
+
     </section>
 
   </main>
 
   <!-- ============================================= -->
-  <!-- FOOTER                                         -->
+  <!-- FOOTER                                        -->
   <!-- ============================================= -->
   <footer id="contact" class="bg-brown text-cream mt-12 md:mt-16">
     <div class="max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-14 grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
@@ -266,7 +274,6 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- DIPERBAIKI: Nama file disesuaikan dengan supabaseClient.js -->
   <script src="js/supabaseClient.js"></script>
   <script src="js/main.js"></script>
   <script src="js/auth.js"></script>
