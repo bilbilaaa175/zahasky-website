@@ -3,198 +3,481 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zahasky — Desain Interior</title>
+  <title>Zahasky — Interior & Architecture Studio</title>
 
-  <!-- Google Fonts: Playfair Display (heading) + Poppins (body/nav) + JetBrains Mono (angka/badge/code) -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
     rel="stylesheet"
   />
 
-  <!-- Tailwind — hasil compile dari src/input.css -->
+  <!-- Tailwind — Hasil Compile dari src/input.css -->
   <link rel="stylesheet" href="tailwind.css" />
 </head>
 
-<body class="antialiased font-sans">
+<body class="antialiased font-sans bg-white text-ink min-h-screen flex flex-col justify-between">
 
-<!-- ============================================= -->
-<!-- 1. HEADER — MAIN NAVBAR + SUB-NAVBAR           -->
-<!-- ============================================= -->
-<header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-brown/10">
+  <!-- ============================================= -->
+  <!-- 1. HEADER — MAIN NAVBAR + SUB-NAVBAR           -->
+  <!-- ============================================= -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-brown/10">
 
-  <!-- Main Navbar -->
-  <div class="max-w-7xl mx-auto px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
+    <!-- Main Navbar -->
+    <div class="max-w-7xl mx-auto px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
 
-    <!-- Kiri: Logo -->
-    <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">
-      Zahasky.
-    </a>
+      <!-- Kiri: Logo -->
+      <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">
+        Zahasky.
+      </a>
 
-    <!-- Tengah: Menu Utama (desktop) -->
-    <nav class="hidden md:flex items-center gap-10 text-base">
-      <a href="index.html" class="nav-link">Home</a>
-      <a href="catalog.html" class="nav-link">Catalog</a>
-      <a href="package.html" class="nav-link">Package</a>
-      <a href="publicity.html" class="nav-link">Publicity</a>
-      <a href="contact.html" class="nav-link">Contact</a>
-    </nav>
+      <!-- Tengah: Menu Utama (desktop) -->
+      <nav class="hidden md:flex items-center gap-10 text-base">
+        <a href="index.html" class="nav-link-active">Home</a>
+        <a href="catalog.html" class="nav-link">Catalog</a>
+        <a href="package.html" class="nav-link">Package</a>
+        <a href="publicity.html" class="nav-link">Publicity</a>
+        <a href="contact.html" class="nav-link">Contact</a>
+      </nav>
 
-    <!-- Kanan: Cart, Auth Status (desktop) + Hamburger (mobile) -->
-    <div class="flex items-center gap-2 md:gap-4">
-      
-      <!-- Icon Keranjang Belanja + badge counter -->
-      <button type="button" aria-label="Keranjang belanja" class="relative p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 0 0 2 1.65h8.1a2 2 0 0 0 2-1.65L20 7H6" />
-          <circle cx="9.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="16.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
-        </svg>
-        <span id="cart-count" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brown text-cream text-[10px] font-mono font-semibold leading-none">
-          0
-        </span>
-      </button>
+      <!-- Kanan: Cart, Auth Status (desktop) + Hamburger (mobile) -->
+      <div class="flex items-center gap-2 md:gap-4">
+        
+        <!-- Icon Keranjang Belanja -->
+        <button type="button" aria-label="Keranjang belanja" class="relative p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 0 0 2 1.65h8.1a2 2 0 0 0 2-1.65L20 7H6" />
+            <circle cx="9.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
+            <circle cx="16.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
+          </svg>
+          <span id="cart-count" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brown text-cream text-[10px] font-mono font-semibold leading-none">
+            0
+          </span>
+        </button>
 
-      <!-- KONDISI 1: Guest (Belum Login) - DESKTOP -->
-      <div id="guest-nav" class="flex items-center gap-4">
-        <a href="login.html" class="text-base nav-link">
-          Login
+        <!-- Guest Nav Desktop -->
+        <div id="guest-nav" class="flex items-center gap-4">
+          <a href="login.html" class="text-base nav-link">Login</a>
+          <a href="register.html">
+            <button 
+              type="button" 
+              class="rounded-pill bg-brown text-cream text-base font-semibold px-5 py-2.5 hover:bg-brown/80 transition-colors cursor-pointer"
+            >
+              Register
+            </button>
+          </a>
+        </div>
+
+        <!-- User Nav Desktop -->
+        <div id="user-nav" class="hidden items-center">
+          <a href="profile.html" title="Profil Saya" class="p-2 rounded-full text-ink hover:bg-brown/5 transition-colors cursor-pointer flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- Hamburger toggle (mobile) -->
+        <button
+          type="button"
+          id="mobile-menu-toggle"
+          aria-label="Buka menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          class="md:hidden p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer"
+        >
+          <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Sub-Navbar (desktop) -->
+    <div id="sub-navbar" class="hidden md:block border-t border-brown/10 bg-brown/[0.03]">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 h-10 flex items-center gap-8 text-xs font-medium text-brown/70">
+        <a href="#who" class="hover:text-brown transition-colors">Who</a>
+        <a href="#how" class="hover:text-brown transition-colors">How</a>
+        <a href="#team" class="hover:text-brown transition-colors">Team</a>
+        <a href="#client" class="hover:text-brown transition-colors">Client</a>
+        <a href="#timeline" class="hover:text-brown transition-colors">Timeline</a>
+      </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="md:hidden hidden flex-col border-t border-brown/10 bg-white px-6 py-4 gap-1">
+      <a href="index.html" class="py-2.5 text-base font-semibold text-brown border-b border-brown/5">Home</a>
+      <a href="catalog.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Catalog</a>
+      <a href="package.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Package</a>
+      <a href="publicity.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Publicity</a>
+      <a href="contact.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Contact</a>
+
+      <div class="flex items-center gap-4 py-2 border-b border-brown/5 text-xs text-brown/70">
+        <a href="#who" class="hover:text-brown">Who</a>
+        <a href="#how" class="hover:text-brown">How</a>
+        <a href="#team" class="hover:text-brown">Team</a>
+        <a href="#client" class="hover:text-brown">Client</a>
+        <a href="#timeline" class="hover:text-brown">Timeline</a>
+      </div>
+
+      <div id="mobile-guest-nav" class="flex items-center gap-3 mt-4">
+        <a href="login.html" class="flex-1">
+          <button type="button" class="w-full text-sm font-semibold text-gray-500 border border-brown/20 rounded-pill py-2.5 hover:bg-brown/5 transition-colors cursor-pointer">
+            Login
+          </button>
         </a>
-        <a href="register.html">
-          <button 
-            type="button" 
-            class="rounded-pill bg-brown text-cream text-base font-semibold px-5 py-2.5 hover:bg-brown/80 transition-colors cursor-pointer"
-          >
+        <a href="register.html" class="flex-1">
+          <button type="button" class="w-full rounded-pill bg-brown text-cream text-sm font-semibold py-2.5 hover:bg-brown/80 transition-colors cursor-pointer">
             Register
           </button>
         </a>
       </div>
 
-      <!-- KONDISI 2: User (Sudah Login) - DESKTOP (Avatar Icon) -->
-      <div id="user-nav" class="hidden items-center">
-        <a href="profile.html" title="Profil Saya" class="p-2 rounded-full text-ink hover:bg-brown/5 transition-colors cursor-pointer flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+      <div id="mobile-user-nav" class="hidden mt-4 pt-3 border-t border-brown/10">
+        <a href="profile.html" class="flex items-center gap-2 py-2 text-base font-semibold text-brown hover:opacity-80">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
+          <span>Profil Saya</span>
         </a>
       </div>
-
-      <!-- Hamburger toggle (mobile only) -->
-      <button
-        type="button"
-        id="mobile-menu-toggle"
-        aria-label="Buka menu"
-        aria-expanded="false"
-        aria-controls="mobile-menu"
-        class="md:hidden p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer"
-      >
-        <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-
     </div>
-  </div>
-
-  <!-- Sub-Navbar (desktop) -->
-  <div id="sub-navbar" class="hidden md:block border-t border-brown/10 bg-brown/[0.03]">
-    <div class="max-w-7xl mx-auto px-6 md:px-12 h-10 flex items-center gap-8 text-xs font-medium text-brown/70">
-      <span class="opacity-50">// sub-navbar placeholder — isi oleh tim</span>
-    </div>
-  </div>
-
-  <!-- Mobile Menu (dropdown) -->
-  <div id="mobile-menu" class="md:hidden hidden flex-col border-t border-brown/10 bg-white px-6 py-4 gap-1">
-    <a href="index.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Home</a>
-    <a href="catalog.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Catalog</a>
-    <a href="package.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Package</a>
-    <a href="publicity.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Publicity</a>
-    <a href="contact.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70">Contact</a>
-
-    <!-- KONDISI 1: Guest - MOBILE -->
-    <div id="mobile-guest-nav" class="flex items-center gap-3 mt-4">
-      <a href="login.html" class="flex-1">
-        <button type="button" class="w-full text-sm font-semibold text-gray-500 border border-brown/20 rounded-pill py-2.5 hover:bg-brown/5 transition-colors cursor-pointer">
-          Login
-        </button>
-      </a>
-      <a href="register.html" class="flex-1">
-        <button type="button" class="w-full rounded-pill bg-brown text-cream text-sm font-semibold py-2.5 hover:bg-brown/80 transition-colors cursor-pointer">
-          Register
-        </button>
-      </a>
-    </div>
-
-    <!-- KONDISI 2: User - MOBILE -->
-    <div id="mobile-user-nav" class="hidden mt-4 pt-3 border-t border-brown/10">
-      <a href="profile.html" class="flex items-center gap-2 py-2 text-base font-semibold text-brown hover:opacity-80">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-        </svg>
-        <span>Profil Saya</span>
-      </a>
-    </div>
-
-  </div>
-</header>
+  </header>
 
   <!-- ============================================= -->
-  <!-- MAIN CONTENT — SKELETON PLACEHOLDER SECTIONS   -->
+  <!-- MAIN CONTENT                                  -->
   <!-- ============================================= -->
-  <main class="max-w-7xl mx-auto px-6 md:px-12">
-    <section id="hero" class="section-placeholder my-6 md:my-8 min-h-[320px] md:min-h-[480px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#hero</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">HERO SECTION</p>
+  <main class="grow w-full">
+
+    <!-- 1. HERO SECTION -->
+    <section id="hero" class="max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+      <div class="lg:col-span-6 space-y-6">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brown/5 border border-brown/15 text-xs font-mono font-semibold text-brown">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+          Interior & Architecture Studio
+        </div>
+        
+        <h1 class="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-ink leading-[1.15] tracking-tight">
+          Ruang yang Fungsional, Estetis, dan Berkarakter
+        </h1>
+
+        <p class="text-ink/60 text-sm md:text-base leading-relaxed max-w-xl">
+          Koleksi file desain interior siap pakai — dari gambar kerja hingga model 3D. Langsung unduh setelah pembayaran.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-4 pt-2">
+          <a href="catalog.html" class="inline-flex items-center gap-2 bg-brown text-cream text-sm md:text-base font-semibold px-6 py-3.5 rounded-full hover:bg-ink transition-colors duration-200 shadow-sm">
+            <span>Lihat Katalog</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+          </a>
+          <a href="package.html" class="inline-flex items-center gap-2 border border-brown/20 text-ink text-sm md:text-base font-semibold px-6 py-3.5 rounded-full hover:bg-brown/5 transition-colors duration-200">
+            Lihat Paket
+          </a>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6 pt-6 border-t border-brown/10 max-w-md">
+          <div>
+            <p class="font-serif font-bold text-2xl md:text-3xl text-brown">15<span class="text-lg">+</span></p>
+            <p class="text-[11px] font-mono font-medium text-ink/50 uppercase tracking-wider mt-0.5">Years</p>
+          </div>
+          <div>
+            <p class="font-serif font-bold text-2xl md:text-3xl text-brown">60<span class="text-lg">+</span></p>
+            <p class="text-[11px] font-mono font-medium text-ink/50 uppercase tracking-wider mt-0.5">Clients</p>
+          </div>
+          <div>
+            <p class="font-serif font-bold text-2xl md:text-3xl text-brown">120<span class="text-lg">+</span></p>
+            <p class="text-[11px] font-mono font-medium text-ink/50 uppercase tracking-wider mt-0.5">Projects</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6 relative">
+        <div class="relative rounded-[32px] overflow-hidden shadow-xl border border-brown/10 w-full max-w-[500px] mx-auto lg:ml-auto">
+          
+          <!-- Gambar dengan rasio 1080x1350 (4:5) -->
+          <img 
+            src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1080&h=1350&fit=crop&q=80" 
+            alt="Zahasky Interior Showcase" 
+            class="w-full aspect-[4/5] object-cover"
+          >
+          
+          <!-- Badge Format File di Pojok Kiri Bawah -->
+          <div class="absolute bottom-6 left-6 bg-white/90 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/40 shadow-sm">
+            <span class="block text-[10px] font-mono uppercase text-ink/50">Format File</span>
+            <span class="font-serif font-bold text-sm text-ink tracking-wide">SKP • DWG • PDF</span>
+          </div>
+
+        </div>
+      </div>
     </section>
 
-    <section id="who" class="section-placeholder my-6 md:my-8 min-h-[240px] md:min-h-[360px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#who</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">ABOUT / WHO SECTION</p>
+    <!-- 2. WHO SECTION -->
+    <section id="who" class="border-t border-brown/10 py-16 md:py-24 bg-brown/[0.01]">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+        
+        <!-- Sidebar Label & Line Vertikal -->
+        <div class="md:col-span-3 flex items-start gap-4">
+          <div class="w-1 h-12 bg-brown shrink-0 rounded-full mt-0.5"></div>
+          <span class="text-sm md:text-base font-mono font-bold uppercase tracking-widest text-brown/80 pt-1">WHO</span>
+        </div>
+
+        <div class="md:col-span-9 space-y-3">
+          <span class="text-xs font-mono font-semibold uppercase tracking-widest text-brown">INTERIOR & ARCHITECTURE STUDIO</span>
+          <h2 class="font-serif text-3xl md:text-4xl font-bold text-ink">Tentang Dananjaya</h2>
+          <p class="text-ink/60 text-base md:text-lg leading-relaxed max-w-2xl">
+            Studio desain interior yang berfokus pada ruang fungsional dan berkarakter.
+          </p>
+        </div>
+      </div>
     </section>
 
-    <section id="how" class="section-placeholder my-6 md:my-8 min-h-[240px] md:min-h-[360px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#how</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">HOW WE WORK SECTION</p>
+    <!-- 3. HOW SECTION -->
+    <section id="how" class="border-t border-brown/10 py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+        
+        <!-- Sidebar Label & Line Vertikal -->
+        <div class="md:col-span-3 flex items-start gap-4">
+          <div class="w-1 h-12 bg-brown shrink-0 rounded-full mt-0.5"></div>
+          <span class="text-sm md:text-base font-mono font-bold uppercase tracking-widest text-brown/80 pt-1">HOW</span>
+        </div>
+
+        <div class="md:col-span-9 space-y-3">
+          <span class="text-xs font-mono font-semibold uppercase tracking-widest text-brown">METODE KERJA</span>
+          <h2 class="font-serif text-3xl md:text-4xl font-bold text-ink">Cara Kami Bekerja</h2>
+          <p class="text-ink/60 text-base md:text-lg leading-relaxed max-w-2xl">
+            Perencanaan, pengembangan konsep, hingga realisasi.
+          </p>
+        </div>
+      </div>
     </section>
 
-    <section id="team" class="section-placeholder my-6 md:my-8 min-h-[240px] md:min-h-[360px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#team</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">OUR TEAM SECTION</p>
+    <!-- 4. TEAM SECTION -->
+    <section id="team" class="border-t border-brown/10 py-16 md:py-24 bg-white">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+        
+        <!-- Sidebar Label & Line Vertikal Kiri -->
+        <div class="md:col-span-3 flex items-start gap-4">
+          <div class="w-1 h-12 bg-brown shrink-0 rounded-full mt-0.5"></div>
+          <span class="text-sm md:text-base font-mono font-bold uppercase tracking-widest text-brown/80 pt-1">TEAM</span>
+        </div>
+
+        <!-- Area Konten Utama Kanan -->
+        <div class="md:col-span-9 space-y-8">
+          <!-- Judul Seksi -->
+          <div>
+            <span class="text-xs font-mono font-semibold uppercase tracking-widest text-brown">TIM KAMI</span>
+            <h2 class="font-serif text-3xl md:text-4xl font-bold text-ink mt-1">Orang-orang di Balik Setiap Rancangan</h2>
+          </div>
+
+          <!-- Container Layout: Filter Vertikal (Kiri) + Cards Tim Grid (Kanan) -->
+          <div class="flex flex-col sm:flex-row gap-6 items-start pt-2">
+            
+            <!-- Filter Role Vertikal (Lebar Tetap) -->
+            <div id="team-filter-container" class="w-full sm:w-36 shrink-0 flex flex-row sm:flex-col flex-wrap gap-2">
+              <!-- Tombol Filter Dirender oleh JavaScript -->
+            </div>
+
+            <!-- Grid Kartu Tim (Mengisi Sisa Ruang) -->
+            <div id="team-container" class="grow w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <p class="text-sm text-gray-400 col-span-full">Memuat data tim...</p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
     </section>
 
-    <section id="client" class="section-placeholder my-6 md:my-8 min-h-[180px] md:min-h-[280px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#client</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">CLIENTS SECTION</p>
+    <!-- 5. CLIENT SECTION (DINAMIS DARI SUPABASE) -->
+    <section id="client" class="border-t border-brown/10 py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+        
+        <!-- Sidebar Label & Line Vertikal -->
+        <div class="md:col-span-3 flex items-start gap-4">
+          <div class="w-1 h-12 bg-brown shrink-0 rounded-full mt-0.5"></div>
+          <span class="text-sm md:text-base font-mono font-bold uppercase tracking-widest text-brown/80 pt-1">CLIENT</span>
+        </div>
+
+        <div class="md:col-span-9 space-y-8">
+          <div>
+            <span class="text-xs font-mono font-semibold uppercase tracking-widest text-brown">KLIEN KAMI</span>
+            <h2 class="font-serif text-3xl md:text-4xl font-bold text-ink mt-1">Dipercaya oleh Institusi Terkemuka</h2>
+            <p class="text-sm text-ink/60 mt-1">66+ klien dari berbagai sektor</p>
+          </div>
+
+          <!-- Container Dinamis Klien -->
+          <div id="client-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
+            <p class="text-sm text-gray-400 col-span-full">Memuat data klien...</p>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section id="timeline" class="section-placeholder my-6 md:my-8 min-h-[240px] md:min-h-[360px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#timeline</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">TIMELINE SECTION</p>
+   <!-- 6. TIMELINE SECTION (DINAMIS DARI SUPABASE) -->
+    <section id="timeline" class="border-t border-brown/10 py-16 md:py-24 bg-brown/[0.01]">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+        
+        <!-- Sidebar Label & Line Vertikal -->
+        <div class="md:col-span-3 flex items-start gap-4">
+          <div class="w-1 h-12 bg-brown shrink-0 rounded-full mt-0.5"></div>
+          <span class="text-sm md:text-base font-mono font-bold uppercase tracking-widest text-brown/80 pt-1">TIMELINE</span>
+        </div>
+
+        <div class="md:col-span-9 space-y-8 overflow-hidden">
+          <div>
+            <span class="text-xs font-mono font-semibold uppercase tracking-widest text-brown">PERJALANAN KAMI</span>
+            <h2 class="font-serif text-3xl md:text-4xl font-bold text-ink mt-1">Rekam Jejak Dananjaya</h2>
+          </div>
+
+          <!-- Container Dinamis Timeline (Horizontal Scrollable) -->
+          <div id="timeline-container" class="flex overflow-x-auto gap-6 pb-6 pt-2 scrollbar-thin">
+            <p class="text-sm text-gray-400">Memuat rekam jejak...</p>
+          </div>
+        </div>
+
+      </div>
     </section>
 
-    <section id="value-proposition" class="section-placeholder my-6 md:my-8 min-h-[240px] md:min-h-[360px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#value-proposition</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">VALUE PROPOSITION SECTION</p>
+    <!-- 7. VALUE PROPOSITION SECTION -->
+    <section id="value-proposition" class="border-t border-brown/10 py-12 md:py-16">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="flex items-start gap-4 p-6 rounded-2xl bg-brown/5 border border-brown/10">
+          <div class="w-12 h-12 shrink-0 rounded-2xl bg-brown/10 flex items-center justify-center text-brown">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-serif font-bold text-lg text-ink">Unduh Instan</h4>
+            <p class="text-xs text-ink/60 mt-1 leading-relaxed">
+              Link Google Drive dibuka otomatis setelah pembayaran berhasil.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 p-6 rounded-2xl bg-brown/5 border border-brown/10">
+          <div class="w-12 h-12 shrink-0 rounded-2xl bg-brown/10 flex items-center justify-center text-brown">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751A11.959 11.959 0 0112 2.714z" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-serif font-bold text-lg text-ink">Pembayaran Aman</h4>
+            <p class="text-xs text-ink/60 mt-1 leading-relaxed">
+              Transaksi diproses lewat Midtrans — kartu, e-wallet, VA, & QRIS.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 p-6 rounded-2xl bg-brown/5 border border-brown/10">
+          <div class="w-12 h-12 shrink-0 rounded-2xl bg-brown/10 flex items-center justify-center text-brown">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385c.116.486-.423.878-.838.614l-4.708-3.003a.563.563 0 00-.594 0l-4.708 3.003c-.415.264-.954-.128-.838-.614l1.285-5.385a.563.563 0 00-.182-.557l-4.204-3.602c-.38-.325-.178-.948.32-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-serif font-bold text-lg text-ink">Kualitas Studio</h4>
+            <p class="text-xs text-ink/60 mt-1 leading-relaxed">
+              File dikurasi langsung oleh studio Dananjaya Design.
+            </p>
+          </div>
+        </div>
+
+      </div>
     </section>
 
-    <section id="featured-products" class="section-placeholder my-6 md:my-8 min-h-[280px] md:min-h-[420px] flex items-center justify-center px-4 text-center">
-      <span class="section-placeholder-badge font-mono text-xs md:text-sm font-semibold text-cream bg-brown px-3 py-1.5 rounded-full">#featured-products</span>
-      <p class="font-serif text-xl md:text-2xl font-semibold text-brown/80">FEATURED PRODUCTS SECTION</p>
+    <!-- 8. FEATURED PRODUCTS SECTION (STATIS) -->
+    <section id="featured-products" class="border-t border-brown/10 py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-6 md:px-12 space-y-8">
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 class="font-serif text-3xl md:text-4xl font-bold text-ink">Produk Unggulan</h2>
+            <p class="text-sm text-ink/60 mt-1">Pilihan file desain terbaik dari studio kami.</p>
+          </div>
+          <a href="catalog.html" class="inline-flex items-center gap-1.5 text-sm font-semibold text-brown hover:underline">
+            <span>Semua produk</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Card 1 -->
+          <div class="rounded-3xl border border-gray-200 bg-white overflow-hidden hover:border-brown/30 hover:shadow-md transition-all duration-200 group">
+            <div class="relative overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&auto=format&fit=crop&q=80" alt="Cozy Coffee Shop Concept" class="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300">
+              <span class="absolute top-4 left-4 text-[10px] font-mono font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-white/90 backdrop-blur text-brown shadow-sm">
+                Buku
+              </span>
+            </div>
+            <div class="p-6">
+              <h4 class="font-serif font-bold text-xl text-ink group-hover:text-brown transition-colors">Cozy Coffee Shop Concept</h4>
+              <p class="text-xs text-ink/60 mt-2 leading-relaxed">Konsep desain kedai kopi industrial-warm siap pakai.</p>
+              <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                <span class="font-serif font-bold text-brown text-lg">Rp 275.000</span>
+                <span class="text-[11px] font-mono text-gray-400">SKP, PDF, DWG</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="rounded-3xl border border-gray-200 bg-white overflow-hidden hover:border-brown/30 hover:shadow-md transition-all duration-200 group">
+            <div class="relative overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&auto=format&fit=crop&q=80" alt="Interior Residential" class="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300">
+              <span class="absolute top-4 left-4 text-[10px] font-mono font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-white/90 backdrop-blur text-brown shadow-sm">
+                Interior Residential
+              </span>
+            </div>
+            <div class="p-6">
+              <h4 class="font-serif font-bold text-xl text-ink group-hover:text-brown transition-colors">Modern Living Room Pack</h4>
+              <p class="text-xs text-ink/60 mt-2 leading-relaxed">Paket lengkap desain ruang keluarga gaya minimalis hangat.</p>
+              <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                <span class="font-serif font-bold text-brown text-lg">Rp 350.000</span>
+                <span class="text-[11px] font-mono text-gray-400">SKP, DWG</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="rounded-3xl border border-gray-200 bg-white overflow-hidden hover:border-brown/30 hover:shadow-md transition-all duration-200 group">
+            <div class="relative overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=600&auto=format&fit=crop&q=80" alt="3D & Rendering" class="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300">
+              <span class="absolute top-4 left-4 text-[10px] font-mono font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-white/90 backdrop-blur text-brown shadow-sm">
+                3D & Rendering
+              </span>
+            </div>
+            <div class="p-6">
+              <h4 class="font-serif font-bold text-xl text-ink group-hover:text-brown transition-colors">Minimalist Master Bedroom</h4>
+              <p class="text-xs text-ink/60 mt-2 leading-relaxed">Gambar kerja detail dan asset model kamar tidur utama.</p>
+              <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                <span class="font-serif font-bold text-brown text-lg">Rp 420.000</span>
+                <span class="text-[11px] font-mono text-gray-400">SKP, PDF</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </section>
+
   </main>
 
   <!-- ============================================= -->
-  <!-- 10. FOOTER — LENGKAP, GRID 3 KOLOM             -->
+  <!-- 10. FOOTER                                    -->
   <!-- ============================================= -->
   <footer id="contact" class="bg-brown text-cream mt-12 md:mt-16">
     <div class="max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-14 grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
       <div>
         <p class="font-serif font-bold text-2xl">Zahasky.</p>
-        <p class="mt-3 text-sm text-cream/70 max-w-xs">
+        <p class="mt-3 text-sm text-cream/70 max-w-xs leading-relaxed">
           Studio desain interior. Kami menjual file desain siap pakai — gambar kerja, model 3D, dan konsep — untuk membantu mewujudkan ruang yang fungsional dan berkarakter.
         </p>
       </div>
@@ -202,11 +485,11 @@
       <div>
         <p class="text-xs font-semibold uppercase tracking-wide text-cream/50">Menu</p>
         <ul class="mt-4 space-y-2 text-sm text-cream/80">
-          <li><a href="#featured-products" class="hover:text-cream transition-colors">Catalog</a></li>
-          <li><a href="#value-proposition" class="hover:text-cream transition-colors">Package</a></li>
-          <li><a href="#client" class="hover:text-cream transition-colors">Publicity</a></li>
-          <li><a href="#contact" class="hover:text-cream transition-colors">Contact</a></li>
-          <li><a href="#profile" class="hover:text-cream transition-colors">My Account</a></li>
+          <li><a href="catalog.html" class="hover:text-cream transition-colors">Catalog</a></li>
+          <li><a href="package.html" class="hover:text-cream transition-colors">Package</a></li>
+          <li><a href="publicity.html" class="hover:text-cream transition-colors">Publicity</a></li>
+          <li><a href="contact.html" class="hover:text-cream transition-colors">Contact</a></li>
+          <li><a href="profile.html" class="hover:text-cream transition-colors">My Account</a></li>
         </ul>
       </div>
 
@@ -214,9 +497,9 @@
         <p class="text-xs font-semibold uppercase tracking-wide text-cream/50">Kontak</p>
         <ul class="mt-4 space-y-2 text-sm text-cream/80 font-mono">
           <li>+62 895 2394 1316</li>
-          <li>info@zahasky.com</li>
+          <li>info@dananjayadesign.com</li>
           <li>PT. Dananjaya Design Nusantara Jl. Ganesha No.15E, Lb. Siliwangi, Kecamatan Coblong, Kota Bandung, Jawa Barat 40132</li>
-          <li>@zahasky</li>
+          <li>@dananjayadesign</li>
         </ul>
       </div>
     </div>
@@ -229,12 +512,11 @@
     </div>
   </footer>
 
-<!-- Supabase SDK JS -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- Inisialisasi Supabase Client & Logika UI Navbar/Mobile Menu -->
-<script src="js/supabaseClient.js"></script>
-<script src="js/main.js"></script>
+  <!-- Supabase SDK JS & Custom Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/home.js"></script>
 
 </body>
 </html>
