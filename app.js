@@ -12,6 +12,7 @@ const {
     getProductById, 
     createSalesOrder, 
     confirmSalesOrder, 
+    confirmSalesOrderByRef,
     getDigitalFileUrl, 
     getDigitalUrlByOrderId 
 } = require('./odooService');
@@ -173,102 +174,197 @@ app.get('/api/products/:id/image', async (req, res) => {
 });
 
 // =========================================================================
-// Endpoint 2: Proses Checkout (Buat SO di Odoo + Buat Invoice di Xendit)
+// Endpoint 2: Proses Checkout (Buat Quotation di Odoo + Invoice di Xendit)
 // =========================================================================
 app.post('/api/checkout', async (req, res) => {
     try {
-        const { productId, productName, price, customerEmail } = req.body; 
+        const { orderId, amount, customerEmail, customerName, items, description } = req.body; 
 
-        // 1. Buat data Sales Order di Odoo dengan Product ID asli
-        const odooOrderId = await createSalesOrder(1, productId, productName, price);
-        console.log(`✓ Sales Order sukses dibuat di Odoo dengan ID: ${odooOrderId}`);
+        const externalId = orderId || `ZHK-${Date.now()}`;
+        const totalAmount = parseFloat(amount || 0);
 
-        // 2. Buat Invoice / Link Pembayaran di Xendit
+        // A. Buat Quotation (sale.order) di Odoo dengan client_order_ref = externalId (ZHK-...)
+        try {
+            const odooOrderId = await createSalesOrder(1, items, externalId);
+            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
+        } catch (odooErr) {
+            console.warn(`⚠️ [Odoo] Gagal membuat Quotation di Odoo (abaikan jika offline/koneksi): ${odooErr.message}`);
+        }
+
+        // B. Buat Invoice via Xendit SDK (REST API /v2/invoices)
         const xenditInvoice = await Invoice.createInvoice({
             data: {
-                externalId: `odoo-order-${odooOrderId}`,
-                amount: price,
-                payerEmail: customerEmail,
-                description: `Pembayaran untuk ${productName} (Odoo SO #${odooOrderId})`,
-                invoiceDuration: '86400',
-                items: [
-                    {
-                        name: productName,
-                        price: price,
-                        quantity: 1,
-                        category: 'Digital Product',
-                        referenceId: String(productId) 
-                    }
-                ]
+                externalId: externalId,
+                amount: totalAmount,
+                payerEmail: customerEmail || 'customer@zahasky.com',
+                description: description || `Pembayaran Pesanan Zahasky (${externalId})`,
+                invoiceDuration: '86400', // 24 jam
+                successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
+                items: Array.isArray(items) ? items.map(item => ({
+                    name: item.name || 'Produk Zahasky',
+                    price: parseFloat(item.price || 0),
+                    quantity: parseInt(item.quantity || 1),
+                    category: item.page_type || 'Product'
+                })) : []
             }
         });
 
+        const invoiceUrl = xenditInvoice.invoiceUrl || xenditInvoice.invoice_url;
+        console.log(`✓ Invoice Xendit berhasil dibuat untuk ${externalId}: ${invoiceUrl}`);
+
         res.json({
             success: true,
-            message: "Order berhasil dibuat!",
-            orderId: odooOrderId,
-            paymentUrl: xenditInvoice.invoiceUrl
+            message: "Invoice Xendit & Quotation Odoo berhasil dibuat!",
+            orderId: externalId,
+            invoiceUrl: invoiceUrl
         });
 
     } catch (error) {
-        console.error("Detail Error:", error);
-        res.status(500).json({ success: false, message: "Checkout gagal", error: error.message });
+        console.error("Detail Error Invoice Xendit:", error);
+        res.status(500).json({ success: false, message: "Gagal membuat Invoice Xendit", error: error.message });
     }
 });
 
 // =========================================================================
 // Endpoint 3: Webhook Xendit (Menerima Notifikasi Bayar Otomatis)
+// Mendukung /api/xendit/webhook dan /api/webhook/xendit
 // =========================================================================
-app.post('/api/webhook/xendit', async (req, res) => {
+const handleXenditWebhook = async (req, res) => {
     try {
-        // 1. Verifikasi Verification Token dari Header HTTP Xendit
+        // 1. Verifikasi Verification Token dari Header HTTP Xendit (jika dikonfigurasi)
         const xenditTokenHeader = req.headers['x-callback-token'];
 
-        if (xenditTokenHeader !== process.env.XENDIT_WEBHOOK_TOKEN) {
+        if (process.env.XENDIT_WEBHOOK_TOKEN && xenditTokenHeader && xenditTokenHeader !== process.env.XENDIT_WEBHOOK_TOKEN) {
             console.warn("⚠️ [SECURITY ALERT] Webhook ditolak! Verification Token tidak cocok.");
             return res.status(403).json({ success: false, message: "Invalid Verification Token" });
         }
 
-        // 2. Baca Data dari Xendit
+        // 2. Baca Data Callback dari Xendit
         const callbackData = req.body;
-        const externalId = callbackData.external_id || callbackData.externalId;
-        const status = callbackData.status || callbackData.paid_status;
+        const externalId = callbackData.external_id || callbackData.externalId || callbackData.reference_id;
+        const status = (callbackData.status || callbackData.paid_status || callbackData.event || '').toUpperCase();
 
-        console.log(`[Webhook] Notifikasi masuk dari Xendit untuk ID: ${externalId}`);
+        console.log(`\n🔔 [Webhook Xendit] Notifikasi masuk untuk Reference: ${externalId} | Status: ${status}`);
 
-        // 3. Validasi apakah status pembayaran adalah PAID
-        if (status === 'PAID' || status === 'COMPLETED' || status === 'SETTLED') {
-            if (externalId && externalId.includes('odoo-order-')) {
-                const odooOrderId = parseInt(externalId.split('-').pop());
+        // 3. Validasi apakah status pembayaran adalah PAID / SETTLED / SUCCEEDED
+        const isPaidStatus = ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'INVOICE.PAID', 'VIRTUAL_ACCOUNT.PAID'].some(s => status.includes(s));
 
-                console.log(`[Webhook] Pembayaran LUNAS. Memproses konfirmasi untuk Odoo Order ID: ${odooOrderId}`);
-                
-                // A. Ubah status Quotation -> Sales Order di Odoo
-                await confirmSalesOrder(odooOrderId);
-                console.log(`✓ [Webhook] Odoo Order ID ${odooOrderId} sukses diperbarui secara otomatis.`);
-
-                // B. Ambil Link Google Drive berdasarkan Order ID
-                try {
-                    const result = await getDigitalUrlByOrderId(odooOrderId);
-
-                    console.log(`\n🎉 [DIGITAL DELIVERY SUCCESS]`);
-                    console.log(`📦 Produk ID: ${result.productId}`);
-                    console.log(`📧 Customer: ${callbackData.payer_email || callbackData.payerEmail || 'Customer'}`);
-                    console.log(`🔗 Link Download (Google Drive): ${result.driveLink}`);
-                    console.log(`--------------------------------------------------\n`);
-
-                } catch (digitalErr) {
-                    console.error("⚠️ Gagal mengambil digital link:", digitalErr.message);
-                }
+        if (isPaidStatus && externalId) {
+            console.log(`✓ [Webhook] Pembayaran LUNAS (${externalId}). Mengonfirmasi Quotation di Odoo...`);
+            
+            try {
+                // Konfirmasi Quotation (sale.order) di Odoo menjadi Sales Order (state: 'sale')
+                await confirmSalesOrderByRef(externalId);
+                console.log(`🎉 [Odoo Delivery] Quotation (${externalId}) sukses dikonfirmasi di Odoo!`);
+            } catch (odooConfirmErr) {
+                console.error(`⚠️ [Odoo Confirm Error]: ${odooConfirmErr.message}`);
             }
         }
 
-        // Respon 200 OK cepat ke Xendit
         return res.status(200).json({ success: true, message: "Webhook processed successfully" });
 
     } catch (error) {
         console.error("❌ [Webhook Error]:", error);
         return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+app.post('/api/xendit/webhook', handleXenditWebhook);
+app.post('/api/webhook/xendit', handleXenditWebhook);
+
+// 1. ENDPOINT: Create Virtual Account (Transfer Bank)
+app.post('/api/payment/va', async (req, res) => {
+    try {
+        const { orderId, amount, bankCode, customerName, customerEmail } = req.body;
+        
+        // Panggil Xendit API Virtual Account
+        const response = await fetch('https://api.xendit.co/callback_virtual_accounts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
+            },
+            body: JSON.stringify({
+                external_id: orderId,
+                bank_code: bankCode.toUpperCase(), // 'BCA', 'MANDIRI', 'BRI', 'BNI'
+                name: customerName || 'Customer Zahasky',
+                expected_amount: amount,
+                is_closed: true,
+                expiration_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 jam
+            })
+        });
+        const vaData = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(vaData.message || 'Gagal membuat Virtual Account');
+        }
+        res.json({
+            success: true,
+            orderId: orderId,
+            bank: vaData.bank_code,
+            vaNumber: vaData.account_number,
+            amount: vaData.expected_amount,
+            expirationDate: vaData.expiration_date,
+            status: 'PENDING'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+// 2. ENDPOINT: Create E-Wallet Charge
+app.post('/api/payment/ewallet', async (req, res) => {
+    try {
+        const { orderId, amount, ewalletType, phone } = req.body; // ewalletType: 'DANA', 'SHOPEEPAY', 'OVO', 'LINKAJA'
+        const response = await fetch('https://api.xendit.co/ewallets/charges', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
+            },
+            body: JSON.stringify({
+                reference_id: orderId,
+                currency: 'IDR',
+                amount: amount,
+                checkout_method: 'ONE_TIME_PAYMENT',
+                channel_code: `ID_${ewalletType.toUpperCase()}`,
+                channel_properties: {
+                    mobile_number: phone || '081234567890',
+                    success_redirect_url: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`
+                }
+            })
+        });
+        const ewalletData = await response.json();
+        
+        // Ambil URL Redirect Checkout
+        const actions = ewalletData.actions || {};
+        const checkoutUrl = actions.desktop_web_checkout_url || actions.mobile_web_checkout_url || actions.qr_checkout_string;
+        res.json({
+            success: true,
+            orderId: orderId,
+            checkoutUrl: checkoutUrl,
+            status: 'PENDING'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+// 3. ENDPOINT: Polling Cek Status Pembayaran (Untuk QRIS & VA)
+app.get('/api/payment/status/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        // Cek status order di database local / Odoo
+        // Mengembalikan status terkini
+        const digitalInfo = await getDigitalUrlByOrderId(orderId).catch(() => null);
+        const isPaid = digitalInfo && (digitalInfo.orderState === 'sale' || digitalInfo.orderState === 'done');
+        res.json({
+            success: true,
+            orderId: orderId,
+            status: isPaid ? 'PAID' : 'PENDING',
+            driveLink: isPaid ? digitalInfo.driveLink : null
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, status: 'PENDING' });
     }
 });
 

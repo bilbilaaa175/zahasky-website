@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Zahasky</title>
+  <meta name="description" content="Selesaikan pesanan Anda dengan aman di Zahasky. Pilih metode pembayaran dan konfirmasi pesanan." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="tailwind.css" />
+
+  <style>
+    /* ── Custom Styles Checkout ── */
+    :root {
+      --brown: #441B07;
+      --cream: #F9F3DB;
+      --ink: #1A1A1A;
+      --muted: #8A8A8A;
+    }
+
+    /* Shimmer loading skeleton */
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #f0e8d0 25%, #e8dfc5 50%, #f0e8d0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* Payment method card */
+    .pay-tab {
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .pay-tab.active {
+      border-bottom-color: #441B07;
+      color: #441B07;
+      font-weight: 600;
+    }
+    .pay-option {
+      border: 1.5px solid #e5e0d5;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: white;
+    }
+    .pay-option:hover {
+      border-color: #441B07;
+      box-shadow: 0 0 0 3px rgba(68,27,7,0.07);
+    }
+    .pay-option.selected {
+      border-color: #441B07;
+      background: rgba(68,27,7,0.03);
+      box-shadow: 0 0 0 3px rgba(68,27,7,0.10);
+    }
+
+    /* Modal overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-box {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(24px) scale(0.97);
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative;
+    }
+    .modal-overlay.open .modal-box {
+      transform: translateY(0) scale(1);
+    }
+
+    /* Success modal special */
+    .success-modal-box {
+      max-width: 440px;
+      text-align: center;
+    }
+    
+    /* Checkmark animation */
+    @keyframes checkPop {
+      0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+      60%  { transform: scale(1.2) rotate(5deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .check-anim {
+      animation: checkPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+    }
+
+    /* Pulse animation untuk status dot */
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+    .pulse-dot { animation: pulse-dot 1.5s infinite; }
+
+    /* Delivery status timeline */
+    .timeline-step { position: relative; }
+    .timeline-step::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 32px;
+      bottom: -8px;
+      width: 2px;
+      background: #e5e0d5;
+    }
+    .timeline-step:last-child::before { display: none; }
+    .timeline-step.done::before { background: #441B07; }
+
+    /* Sticky summary panel */
+    .summary-panel {
+      position: sticky;
+      top: 88px;
+    }
+
+    /* Field input style */
+    .field-input {
+      width: 100%;
+      border: 1.5px solid #e5e0d5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      color: #1A1A1A;
+      background: white;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field-input:focus {
+      border-color: #441B07;
+      box-shadow: 0 0 0 3px rgba(68,27,7,0.08);
+    }
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #441B07;
+      margin-bottom: 6px;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Scrollbar minimal */
+    .modal-box::-webkit-scrollbar { width: 4px; }
+    .modal-box::-webkit-scrollbar-track { background: transparent; }
+    .modal-box::-webkit-scrollbar-thumb { background: #d4c8b0; border-radius: 2px; }
+
+    /* Select styling */
+    select.field-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8A8A' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    select.field-input:disabled {
+      background-color: #f7f3eb;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    /* Bank card hover */
+    .bank-logo {
+      width: 56px;
+      height: 28px;
+      object-fit: contain;
+    }
+    
+    /* Progress bar checkout steps */
+    .step-line {
+      height: 2px;
+      background: linear-gradient(90deg, #441B07 0%, #441B07 var(--progress, 50%), #e5e0d5 var(--progress, 50%));
+    }
+  </style>
+</head>
+
+<body class="antialiased font-sans bg-cream/30 text-ink min-h-screen flex flex-col justify-between">
+
+  <!-- ═══════════════════════════════ NAVBAR ═══════════════════════════════ -->
+  <header class="sticky top-0 z-50 bg-white border-b border-brown/10 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
+
+      <!-- Logo + Breadcrumb "Checkout" -->
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">Zahasky.</a>
+        <span class="hidden sm:flex items-center gap-2 text-muted text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+          </svg>
+          <span class="text-brown font-semibold">Checkout</span>
+        </span>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-10 text-base font-medium text-ink">
+        <a href="index.html" class="hover:text-brown text-muted transition-colors">Home</a>
+        <a href="catalog.html" class="hover:text-brown text-muted transition-colors">Catalog</a>
+        <a href="package.html" class="hover:text-brown text-muted transition-colors">Package</a>
+        <a href="publicity.html" class="hover:text-brown text-muted transition-colors">Publicity</a>
+        <a href="contact.html" class="hover:text-brown text-muted transition-colors">Contact</a>
+      </nav>
+
+      <div class="flex items-center gap-2 md:gap-4">
+        <button type="button" aria-label="Keranjang belanja" class="relative p-2 rounded-full hover:bg-brown/5 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-brown" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 0 0 2 1.65h8.1a2 2 0 0 0 2-1.65L20 7H6" />
+            <circle cx="9.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
+            <circle cx="16.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
+          </svg>
+          <span id="cart-count" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brown text-cream text-[10px] font-mono font-semibold leading-none">0</span>
+        </button>
+
+        <div id="guest-nav" class="flex items-center gap-4">
+          <a href="login.html" class="text-base nav-link">Login</a>
+          <a href="register.html">
+            <button type="button" class="bg-brown text-cream text-base font-semibold px-5 py-2.5 hover:bg-ink transition-colors rounded-none cursor-pointer">Register</button>
+          </a>
+        </div>
+        <div id="user-nav" class="hidden items-center">
+          <a href="profile.html" title="Profil Saya" class="p-2 rounded-full text-ink hover:bg-brown/5 transition-colors cursor-pointer flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════ MAIN ═══════════════════════════════ -->
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 md:py-8 pb-32 md:pb-10">
+
+    <!-- Back button -->
+    <div class="mb-4">
+      <button type="button" onclick="history.back()" class="inline-flex items-center gap-2 text-xs md:text-sm font-semibold text-muted hover:text-brown transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        <span>Kembali ke Keranjang</span>
+      </button>
+    </div>
+
+    <h1 class="font-serif text-2xl md:text-3xl font-bold text-brown mb-6">Konfirmasi Pesanan</h1>
+
+    <!-- Empty state -->
+    <div id="checkout-empty" class="hidden flex-col items-center justify-center py-20 text-center bg-white border border-brown/10 rounded-none">
+      <svg class="w-14 h-14 text-brown/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
+      </svg>
+      <p class="font-serif text-lg font-bold text-brown">Tidak ada produk untuk di-checkout</p>
+      <p class="text-sm text-muted mt-1 mb-5">Pilih produk terlebih dahulu dari halaman katalog atau keranjang.</p>
+      <a href="catalog.html" class="inline-block bg-brown text-cream text-sm font-semibold px-6 py-3 hover:bg-ink transition-colors">Lihat Katalog</a>
+    </div>
+
+    <!-- Checkout content — 2 column layout -->
+    <div id="checkout-content" class="hidden lg:grid lg:grid-cols-[1fr_360px] gap-6 xl:gap-8 items-start">
+
+      <!-- ── LEFT COLUMN ── -->
+      <div class="space-y-5">
+
+        <!-- ① ALAMAT PENGIRIMAN (hanya tampil jika ada produk Publicity) -->
+        <section id="section-address" class="hidden bg-white border border-brown/10 rounded-none shadow-sm">
+          <div class="px-5 py-4 border-b border-brown/10 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+              </svg>
+              <h2 class="font-serif font-bold text-brown text-base">Alamat Pengiriman</h2>
+            </div>
+            <button type="button" id="btn-change-address" onclick="openAddressModal()"
+              class="text-xs font-semibold text-brown border border-brown/30 px-3 py-1.5 hover:bg-brown/5 transition-colors">
+              Ubah Alamat
+            </button>
+          </div>
+
+          <div class="px-5 py-4" id="address-display">
+            <!-- Filled by JS -->
+            <div class="text-center py-4">
+              <p class="text-sm text-muted">Alamat pengiriman belum ditambahkan.</p>
+              <button type="button" onclick="openAddressModal()"
+                class="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-brown underline hover:no-underline">
+                + Tambah Alamat Sekarang
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ② PRODUK DIPESAN -->
+        <section class="bg-white border border-brown/10 rounded-none shadow-sm">
+          <div class="px-5 py-4 border-b border-brown/10 flex items-center gap-2">
+            <svg class="w-5 h-5 text-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z"/>
+            </svg>
+            <h2 class="font-serif font-bold text-brown text-base">Produk Dipesan</h2>
+          </div>
+
+          <!-- Header tabel — desktop only -->
+          <div class="hidden md:grid gap-4 px-5 py-3 bg-brown/5 border-b border-brown/10 text-xs font-semibold text-muted uppercase tracking-wide"
+            style="grid-template-columns: 56px 1fr 110px 80px 110px;">
+            <div></div>
+            <div>Produk</div>
+            <div class="text-right">Harga Satuan</div>
+            <div class="text-center">Qty</div>
+            <div class="text-right">Subtotal</div>
+          </div>
+
+          <!-- Items list -->
+          <div id="checkout-items-list" class="divide-y divide-brown/10">
+            <!-- Filled by JS -->
+          </div>
+        </section>
+
+        <!-- ③ METODE PEMBAYARAN -->
+        <section class="bg-white border border-brown/10 rounded-none shadow-sm">
+          <div class="px-5 py-4 border-b border-brown/10 flex items-center gap-2">
+            <svg class="w-5 h-5 text-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/>
+            </svg>
+            <h2 class="font-serif font-bold text-brown text-base">Metode Pembayaran</h2>
+          </div>
+
+          <!-- Payment Tab Nav -->
+          <div class="flex overflow-x-auto border-b border-brown/10 px-2 md:px-5 gap-1 md:gap-2">
+            <button id="tab-cod" type="button" onclick="switchPayTab('cod')" class="pay-tab px-3 md:px-5 py-3.5 text-sm text-muted active">COD</button>
+            <button id="tab-qris" type="button" onclick="switchPayTab('qris')" class="pay-tab px-3 md:px-5 py-3.5 text-sm text-muted">QRIS</button>
+            <button id="tab-ewallet" type="button" onclick="switchPayTab('ewallet')" class="pay-tab px-3 md:px-5 py-3.5 text-sm text-muted">E-Wallet</button>
+            <button id="tab-bank" type="button" onclick="switchPayTab('bank')" class="pay-tab px-3 md:px-5 py-3.5 text-sm text-muted">Transfer Bank</button>
+          </div>
+
+          <!-- Tab: COD -->
+          <div id="panel-cod" class="p-5">
+            <div class="pay-option selected flex items-center gap-4 p-4" onclick="selectPayOption('COD', 'Tunai', this)">
+              <input type="radio" name="pay-method" id="pay-cod" checked class="accent-brown w-4 h-4 shrink-0" />
+              <div class="flex items-center gap-3 flex-1">
+                <span class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+                  </svg>
+                </span>
+                <div>
+                  <p class="font-semibold text-sm text-ink">Bayar Tunai (COD)</p>
+                  <p class="text-xs text-muted mt-0.5">Bayar saat produk tiba di Mitra Pengiriman</p>
+                </div>
+              </div>
+              <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Tersedia</span>
+            </div>
+            <p class="mt-3 text-xs text-muted px-1">* COD tersedia untuk produk fisik (Publicity). Untuk produk digital, link akan dikirim via email setelah konfirmasi.</p>
+          </div>
+
+          <!-- Tab: QRIS -->
+          <div id="panel-qris" class="p-5 hidden">
+            <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('QRIS', 'QRIS', this); openQrisModal();">
+              <input type="radio" name="pay-method" id="pay-qris" class="accent-brown w-4 h-4 shrink-0" />
+              <div class="flex items-center gap-3 flex-1">
+                <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"/>
+                    <path d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-semibold text-sm text-ink">QRIS</p>
+                  <p class="text-xs text-muted mt-0.5">Scan QR Code — berlaku untuk semua aplikasi banking</p>
+                </div>
+              </div>
+              <span class="shrink-0 text-xs font-semibold text-blue-600">Lihat QR →</span>
+            </div>
+          </div>
+
+          <!-- Tab: E-Wallet -->
+          <div id="panel-ewallet" class="p-5 hidden">
+            <div class="space-y-3">
+              <!-- DANA -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'DANA', this)">
+                <input type="radio" name="pay-method" id="pay-dana" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                    <span class="text-white font-bold text-xs">DANA</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">DANA</p>
+                    <p class="text-xs text-muted">Bayar via aplikasi DANA</p>
+                  </div>
+                </div>
+              </div>
+              <!-- GoPay -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'GoPay', this)">
+                <input type="radio" name="pay-method" id="pay-gopay" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <span class="text-white font-bold text-xs">GO</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">GoPay</p>
+                    <p class="text-xs text-muted">Bayar via GoPay / Gojek</p>
+                  </div>
+                </div>
+              </div>
+              <!-- OVO -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'OVO', this)">
+                <input type="radio" name="pay-method" id="pay-ovo" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
+                    <span class="text-white font-bold text-xs">OVO</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">OVO</p>
+                    <p class="text-xs text-muted">Bayar via OVO</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Instruksi E-Wallet -->
+            <div id="ewallet-instruction" class="hidden mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 space-y-1">
+              <p class="font-semibold">Instruksi Pembayaran via <span id="ewallet-name">E-Wallet</span>:</p>
+              <p>1. Buka aplikasi <span id="ewallet-name-2">E-Wallet</span> di smartphone kamu.</p>
+              <p>2. Pilih menu "Kirim Uang" atau "Transfer".</p>
+              <p>3. Masukkan nomor: <span class="font-mono font-bold">0895-2394-1316</span> (a.n. Zahasky Studio)</p>
+              <p>4. Masukkan nominal sesuai total tagihan, lalu konfirmasi.</p>
+              <p>5. Kirim bukti transfer via WhatsApp ke <span class="font-bold">+62 895 2394 1316</span>.</p>
+            </div>
+          </div>
+
+          <!-- Tab: Transfer Bank -->
+          <div id="panel-bank" class="p-5 hidden">
+            <div class="space-y-3">
+              <!-- BCA -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BCA', this)">
+                <input type="radio" name="pay-method" id="pay-bca" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-12 h-8 bg-blue-600 flex items-center justify-center shrink-0 rounded">
+                    <span class="text-white font-bold text-xs">BCA</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">Bank BCA</p>
+                    <p class="text-xs text-muted font-mono">1234 5678 90 — a.n. Zahasky Studio</p>
+                  </div>
+                </div>
+              </div>
+              <!-- Mandiri -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'Mandiri', this)">
+                <input type="radio" name="pay-method" id="pay-mandiri" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-12 h-8 bg-yellow-500 flex items-center justify-center shrink-0 rounded">
+                    <span class="text-white font-bold text-[10px]">MANDIRI</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">Bank Mandiri</p>
+                    <p class="text-xs text-muted font-mono">1100 0987 6543 — a.n. Zahasky Studio</p>
+                  </div>
+                </div>
+              </div>
+              <!-- BNI -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BNI', this)">
+                <input type="radio" name="pay-method" id="pay-bni" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-12 h-8 bg-orange-600 flex items-center justify-center shrink-0 rounded">
+                    <span class="text-white font-bold text-xs">BNI</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">Bank BNI</p>
+                    <p class="text-xs text-muted font-mono">0321 5678 901 — a.n. Zahasky Studio</p>
+                  </div>
+                </div>
+              </div>
+              <!-- BRI -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BRI', this)">
+                <input type="radio" name="pay-method" id="pay-bri" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-12 h-8 bg-blue-800 flex items-center justify-center shrink-0 rounded">
+                    <span class="text-white font-bold text-xs">BRI</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">Bank BRI</p>
+                    <p class="text-xs text-muted font-mono">0102 0100 4321 — a.n. Zahasky Studio</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Instruksi Transfer Bank -->
+            <div id="bank-instruction" class="hidden mt-4 p-4 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800 space-y-1">
+              <p class="font-semibold">Instruksi Transfer ke <span id="bank-name">Bank</span>:</p>
+              <p>1. Buka aplikasi mobile banking atau ATM <span id="bank-name-2">Bank</span>.</p>
+              <p>2. Pilih menu "Transfer Antar Bank" atau "Transfer ke Rekening".</p>
+              <p>3. Masukkan nomor rekening di atas, lalu masukkan nominal sesuai total tagihan.</p>
+              <p>4. Kirim bukti transfer via WhatsApp ke <span class="font-bold">+62 895 2394 1316</span> untuk konfirmasi.</p>
+              <p class="font-semibold text-amber-700">* Pesanan akan diproses setelah pembayaran terkonfirmasi (max. 1x24 jam).</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ④ CATATAN PESANAN (opsional) -->
+        <section class="bg-white border border-brown/10 rounded-none shadow-sm">
+          <div class="px-5 py-4 border-b border-brown/10 flex items-center gap-2">
+            <svg class="w-5 h-5 text-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
+            </svg>
+            <h2 class="font-serif font-bold text-brown text-base">Catatan (Opsional)</h2>
+          </div>
+          <div class="px-5 py-4">
+            <textarea id="order-note" rows="3" placeholder="Tuliskan catatan atau permintaan khusus untuk pesanan ini..."
+              class="field-input resize-none text-sm"></textarea>
+          </div>
+        </section>
+
+      </div><!-- END LEFT COLUMN -->
+
+      <!-- ── RIGHT COLUMN — Summary Panel ── -->
+      <aside class="summary-panel space-y-4">
+
+        <!-- Summary Card -->
+        <div class="bg-white border border-brown/10 rounded-none shadow-sm">
+          <div class="px-5 py-4 border-b border-brown/10">
+            <h2 class="font-serif font-bold text-brown text-base">Ringkasan Pembayaran</h2>
+          </div>
+          <div class="px-5 py-4 space-y-3 text-sm">
+            <div class="flex justify-between text-muted">
+              <span>Subtotal Produk <span id="summary-item-count" class="text-xs">(0 item)</span></span>
+              <span id="summary-subtotal" class="font-mono font-semibold text-ink">Rp 0</span>
+            </div>
+            <div id="shipping-row" class="hidden flex justify-between text-muted">
+              <span>Ongkos Kirim</span>
+              <span id="summary-shipping" class="font-mono font-semibold text-ink">Rp 0</span>
+            </div>
+            <div class="border-t border-brown/10 pt-3 flex justify-between items-center">
+              <span class="font-semibold text-ink">Total Pembayaran</span>
+              <span id="summary-total" class="font-mono font-bold text-brown text-xl">Rp 0</span>
+            </div>
+          </div>
+
+          <!-- Buat Pesanan Button (DESKTOP) -->
+          <div class="px-5 pb-5">
+            <button type="button" id="btn-place-order-desktop" onclick="placeOrder()"
+              class="w-full bg-brown text-cream font-bold py-4 hover:bg-ink transition-colors text-sm tracking-wide flex items-center justify-center gap-2 shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+              </svg>
+              Buat Pesanan / Bayar Sekarang
+            </button>
+            <p class="text-center text-[10px] text-muted mt-2">
+              Dengan memesan, kamu menyetujui
+              <a href="#" class="underline hover:text-brown">Syarat & Ketentuan</a> Zahasky.
+            </p>
+          </div>
+        </div>
+
+        <!-- Security badge -->
+        <div class="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-none">
+          <svg class="w-5 h-5 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+          </svg>
+          <div>
+            <p class="text-xs font-semibold text-green-800">Transaksi Aman & Terjamin</p>
+            <p class="text-[10px] text-green-600 mt-0.5">Data pribadi kamu dilindungi & dienkripsi</p>
+          </div>
+        </div>
+
+        <!-- Info digital product -->
+        <div id="digital-info-box" class="hidden px-4 py-3 bg-blue-50 border border-blue-100 rounded-none text-xs text-blue-700 space-y-1">
+          <p class="font-semibold flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg>
+            Produk Digital
+          </p>
+          <p>Link Google Drive akan tersedia di <strong>Riwayat Pesanan</strong> setelah pembayaran dikonfirmasi.</p>
+        </div>
+
+      </aside>
+
+    </div><!-- END checkout-content (desktop grid) -->
+
+    <!-- ─── MOBILE ONLY: single-column ─── -->
+    <!-- <div id="checkout-content-mobile" class="hidden lg:hidden space-y-4"> -->
+      <!-- Akan diisi oleh JS dengan layout single-column -->
+    <!-- </div> -->
+
+  </main>
+
+  <!-- ═══════ BOTTOM BAR MOBILE (sticky) ═══════ -->
+  <div id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-brown/10 shadow-xl px-4 py-3 lg:hidden hidden">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <p class="text-xs text-muted">Total Bayar</p>
+        <p id="mobile-total" class="font-mono font-bold text-brown text-xl">Rp 0</p>
+      </div>
+      <button type="button" onclick="placeOrder()"
+        class="flex-1 max-w-[220px] bg-brown text-cream font-bold py-3.5 hover:bg-ink transition-colors text-sm flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+        </svg>
+        Buat Pesanan
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+  <footer class="bg-brown text-cream mt-12">
+    <div class="max-w-7xl mx-auto px-6 md:px-12 py-6 text-center text-xs text-cream/60">
+      <p>&copy; 2026 Zahasky. All rights reserved.</p>
+    </div>
+  </footer>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!--                  MODALS                       -->
+  <!-- ══════════════════════════════════════════════ -->
+
+  <!-- ① Modal: Alamat Pengiriman -->
+  <div id="modal-address" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-address-title">
+    <div class="modal-box">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-brown/10 sticky top-0 bg-white z-10">
+        <h3 id="modal-address-title" class="font-serif font-bold text-brown text-lg">Alamat Pengiriman</h3>
+        <button type="button" onclick="closeAddressModal()" class="w-8 h-8 flex items-center justify-center text-muted hover:text-ink transition-colors rounded-full hover:bg-brown/5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body Form -->
+      <form id="address-form" class="px-6 py-5 space-y-4" onsubmit="saveAddress(event)">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="field-label" for="addr-name">Nama Lengkap Penerima *</label>
+            <input type="text" id="addr-name" class="field-input" placeholder="Nama lengkap..." required />
+          </div>
+          <div>
+            <label class="field-label" for="addr-phone">Nomor Telepon *</label>
+            <input type="tel" id="addr-phone" class="field-input" placeholder="08xxxxxxxxxx" required />
+          </div>
+        </div>
+
+        <!-- Cascading Dropdown -->
+        <div>
+          <label class="field-label" for="addr-province">Provinsi *</label>
+          <select id="addr-province" class="field-input" onchange="onProvinceChange()" required>
+            <option value="">-- Pilih Provinsi --</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="field-label" for="addr-city">Kota / Kabupaten *</label>
+            <select id="addr-city" class="field-input" onchange="onCityChange()" disabled required>
+              <option value="">-- Pilih Kota --</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="addr-district">Kecamatan *</label>
+            <select id="addr-district" class="field-input" onchange="onDistrictChange()" disabled required>
+              <option value="">-- Pilih Kecamatan --</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label" for="addr-postal">Kode Pos</label>
+          <input type="text" id="addr-postal" class="field-input bg-brown/5 font-mono" placeholder="(otomatis terisi)" readonly />
+        </div>
+
+        <div>
+          <label class="field-label" for="addr-detail">Alamat Lengkap *</label>
+          <textarea id="addr-detail" rows="3" class="field-input resize-none"
+            placeholder="Nama jalan, nomor rumah, gedung, RT/RW, dll..." required></textarea>
+        </div>
+
+        <button type="submit"
+          class="w-full bg-brown text-cream font-bold py-3.5 hover:bg-ink transition-colors text-sm tracking-wide mt-1">
+          Simpan Alamat
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ② Modal: QRIS -->
+  <div id="modal-qris" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-box max-w-sm">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-brown/10">
+        <h3 class="font-serif font-bold text-brown text-lg">Bayar via QRIS</h3>
+        <button type="button" onclick="closeQrisModal()" class="w-8 h-8 flex items-center justify-center text-muted hover:text-ink rounded-full hover:bg-brown/5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="px-6 py-5 text-center space-y-4">
+        <!-- QR Code placeholder -->
+        <div class="w-48 h-48 mx-auto bg-white border-2 border-brown/20 flex items-center justify-center rounded-lg overflow-hidden">
+          <svg class="w-40 h-40 text-brown/80" viewBox="0 0 200 200" fill="currentColor">
+            <rect x="10" y="10" width="60" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="8"/>
+            <rect x="25" y="25" width="30" height="30" rx="2"/>
+            <rect x="130" y="10" width="60" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="8"/>
+            <rect x="145" y="25" width="30" height="30" rx="2"/>
+            <rect x="10" y="130" width="60" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="8"/>
+            <rect x="25" y="145" width="30" height="30" rx="2"/>
+            <rect x="100" y="10" width="8" height="8"/>
+            <rect x="112" y="10" width="8" height="8"/>
+            <rect x="100" y="22" width="8" height="8"/>
+            <rect x="112" y="22" width="8" height="8"/>
+            <rect x="100" y="100" width="8" height="8"/>
+            <rect x="112" y="100" width="8" height="8"/>
+            <rect x="124" y="100" width="8" height="8"/>
+            <rect x="136" y="100" width="8" height="8"/>
+            <rect x="148" y="100" width="8" height="8"/>
+            <rect x="160" y="100" width="8" height="8"/>
+            <rect x="172" y="100" width="8" height="8"/>
+            <rect x="184" y="100" width="8" height="8"/>
+            <rect x="100" y="112" width="8" height="8"/>
+            <rect x="124" y="112" width="8" height="8"/>
+            <rect x="148" y="112" width="8" height="8"/>
+            <rect x="172" y="112" width="8" height="8"/>
+            <rect x="100" y="124" width="8" height="8"/>
+            <rect x="112" y="124" width="8" height="8"/>
+            <rect x="136" y="124" width="8" height="8"/>
+            <rect x="160" y="124" width="8" height="8"/>
+            <rect x="184" y="124" width="8" height="8"/>
+            <rect x="100" y="136" width="8" height="8"/>
+            <rect x="124" y="136" width="8" height="8"/>
+            <rect x="148" y="136" width="8" height="8"/>
+            <rect x="160" y="136" width="8" height="8"/>
+            <rect x="100" y="148" width="8" height="8"/>
+            <rect x="112" y="148" width="8" height="8"/>
+            <rect x="136" y="148" width="8" height="8"/>
+            <rect x="172" y="148" width="8" height="8"/>
+            <rect x="184" y="148" width="8" height="8"/>
+            <rect x="100" y="160" width="8" height="8"/>
+            <rect x="124" y="160" width="8" height="8"/>
+            <rect x="148" y="160" width="8" height="8"/>
+            <rect x="160" y="160" width="8" height="8"/>
+            <rect x="100" y="172" width="8" height="8"/>
+            <rect x="112" y="172" width="8" height="8"/>
+            <rect x="124" y="172" width="8" height="8"/>
+            <rect x="136" y="172" width="8" height="8"/>
+            <rect x="148" y="172" width="8" height="8"/>
+            <rect x="172" y="172" width="8" height="8"/>
+            <rect x="184" y="172" width="8" height="8"/>
+            <rect x="100" y="184" width="8" height="8"/>
+            <rect x="124" y="184" width="8" height="8"/>
+            <rect x="160" y="184" width="8" height="8"/>
+            <rect x="184" y="184" width="8" height="8"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-brown text-base">Scan untuk Membayar</p>
+          <p class="text-xs text-muted mt-1">Total: <span id="qris-total" class="font-mono font-bold text-brown">Rp 0</span></p>
+        </div>
+        <div class="text-xs text-muted bg-cream/60 rounded-lg p-3 text-left space-y-1">
+          <p>✓ Buka aplikasi banking atau dompet digital kamu</p>
+          <p>✓ Scan QR Code di atas</p>
+          <p>✓ Konfirmasi jumlah pembayaran</p>
+          <p>✓ Selesaikan transaksi</p>
+        </div>
+        <button type="button" onclick="closeQrisModal(); placeOrder();"
+          class="w-full bg-brown text-cream font-bold py-3.5 hover:bg-ink transition-colors text-sm">
+          Sudah Bayar — Konfirmasi Pesanan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ Modal: Pembayaran Berhasil 🎉 -->
+  <div id="modal-success" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-success-title">
+    <div class="modal-box success-modal-box px-6 py-8">
+      <!-- Checkmark animated -->
+      <div class="check-anim w-20 h-20 mx-auto rounded-full bg-green-500 flex items-center justify-center mb-5">
+        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+        </svg>
+      </div>
+
+      <h3 id="modal-success-title" class="font-serif font-bold text-brown text-2xl mb-2">Pesanan Berhasil! 🎉</h3>
+      <p class="text-sm text-muted mb-1">No. Pesanan: <span id="success-order-id" class="font-mono font-semibold text-ink"></span></p>
+      <p class="text-xs text-muted mb-5">Terima kasih telah berbelanja di Zahasky.</p>
+
+      <!-- Ringkasan singkat -->
+      <div id="success-summary" class="text-left bg-cream/40 rounded-xl p-4 mb-5 text-sm space-y-2">
+        <!-- Filled by JS -->
+      </div>
+
+      <!-- Info digital / fisik -->
+      <div id="success-info" class="text-xs text-center text-muted mb-6">
+        <!-- Filled by JS -->
+      </div>
+
+      <!-- Buttons -->
+      <div class="space-y-3">
+        <a href="profile.html?tab=orders" id="btn-view-orders"
+          class="flex items-center justify-center gap-2 w-full bg-brown text-cream font-bold py-3.5 hover:bg-ink transition-colors text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/>
+          </svg>
+          Lihat Riwayat Pesanan
+        </a>
+        <a href="catalog.html"
+          class="flex items-center justify-center gap-2 w-full border border-brown/30 text-brown font-semibold py-3 hover:bg-brown/5 transition-colors text-sm">
+          Kembali Belanja
+        </a>
+      </div>
+    </div>
+  </div>
+
+<!-- Modal: Virtual Account Pembayaran Bank -->
+<div id="modal-va" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal-box max-w-md p-6 text-center">
+    <div class="w-12 h-12 bg-brown/10 text-brown rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.5M4.5 21V10.5"/>
+      </svg>
+    </div>
+
+    <h3 class="font-serif font-bold text-brown text-xl">Instruksi Transfer Virtual Account</h3>
+    <p class="text-xs text-muted mt-1">Transfer sesuai nominal ke nomor Virtual Account di bawah ini:</p>
+
+    <!-- Info Box VA -->
+    <div class="bg-cream/40 border border-brown/15 rounded-xl p-4 my-4 text-left space-y-2">
+      <div class="flex justify-between items-center text-xs">
+        <span class="text-muted">Bank</span>
+        <span id="va-bank-name" class="font-bold text-brown uppercase">BCA</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-xs text-muted">No. Virtual Account</span>
+        <div class="flex items-center gap-2">
+          <span id="va-number" class="font-mono font-bold text-lg text-brown">880123456789</span>
+          <button type="button" onclick="copyVAToClipboard()" class="text-xs text-blue-600 font-semibold underline">Salin</button>
+        </div>
+      </div>
+      <div class="flex justify-between items-center text-xs">
+        <span class="text-muted">Total Tagihan</span>
+        <span id="va-total-amount" class="font-mono font-bold text-ink">Rp 400.000</span>
+      </div>
+      <div class="flex justify-between items-center text-xs">
+        <span class="text-muted">Batas Waktu Bayar</span>
+        <span id="va-expiry" class="font-mono text-red-600 font-semibold">24 Jam</span>
+      </div>
+    </div>
+
+    <!-- Status Loading Polling -->
+    <div class="flex items-center justify-center gap-2 text-xs text-muted mb-4">
+      <span class="w-2 h-2 rounded-full bg-yellow-500 animate-ping"></span>
+      <span>Menunggu Pembayaran Masuk...</span>
+    </div>
+
+    <a href="profile.html?tab=orders" class="block w-full bg-brown text-cream font-bold py-3 hover:bg-ink transition-colors text-sm">
+      Cek Status di Riwayat Pesanan
+    </a>
+  </div>
+</div>
+
+  <!-- ═══════════════════════ SCRIPTS ═══════════════════════ -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./assets/js/supabaseClient.js"></script>
+  <script src="./assets/js/main.js"></script>
+  <script src="./assets/js/cart-helper.js"></script>
+  <script src="./assets/js/indonesia-regions.js"></script>
+  <script src="./assets/js/checkout.js"></script>
+</body>
+</html>

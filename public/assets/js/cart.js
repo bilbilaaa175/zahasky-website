@@ -53,62 +53,59 @@ function renderCartPage() {
     } else if (itemType.includes("catalog")) {
       targetPage = "catalog.html";
     }
+return `
+  <div class="px-4 py-4 md:px-6 md:py-5 grid cart-table-grid gap-4 items-center bg-white">
+    
+    <!-- KOLOM 1: CHECKBOX -->
+    <div class="flex items-center justify-start">
+      <input type="checkbox" 
+             value="${item.id}" 
+             ${isChecked} 
+             onchange="toggleItemSelect(${item.id}, this.checked)" 
+             class="item-checkbox w-4 h-4 accent-brown cursor-pointer" />
+    </div>
 
-    return `
-      <div class="px-4 py-4 md:px-6 md:py-5 flex flex-col md:grid cart-table-grid gap-4 items-center bg-white">
-        
-        <!-- CHECKBOX ITEM -->
-        <div class="flex items-center justify-start">
-          <input type="checkbox" 
-                 value="${item.id}" 
-                 ${isChecked} 
-                 onchange="toggleItemSelect(${item.id}, this.checked)" 
-                 class="item-checkbox w-4 h-4 accent-brown cursor-pointer" />
-        </div>
-
-        <!-- PRODUK (Bisa Diklik ke Detail Produk) -->
-        <a href="${targetPage}?id=${item.id}" class="flex items-center gap-4 w-full group hover:opacity-80 transition-opacity">          <img src="${item.image_url}" alt="${item.name}" 
-               class="w-16 h-16 md:w-20 md:h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none group-hover:border-brown/40 transition-colors" 
-               onerror="this.src='https://via.placeholder.com/80?text=No+Image'"/>
-          <div class="flex-1 min-w-0">
-            <h3 class="font-serif font-semibold text-brown text-sm md:text-base leading-snug truncate group-hover:underline">${item.name}</h3>
-            <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase bg-brown/10 text-brown rounded-none">
-              ${item.file_format || "ZIP"}
-            </span>
-          </div>
-        </a>
-
-        <!-- HARGA SATUAN -->
-        <div class="text-left md:text-left text-xs md:text-sm text-ink w-full md:w-auto flex justify-between md:block">
-          <span class="md:hidden text-muted">Harga Satuan:</span>
-          <span>${formatRupiah(item.price)}</span>
-        </div>
-
-        <!-- KUANTITAS (Dibuat Tidak Berdempetan) -->
-        <div class="flex items-left justify-between md:justify-left w-full md:w-auto">
-          <span class="md:hidden text-xs text-muted">Kuantitas:</span>
-          <div class="flex items-center border border-brown/20 bg-white rounded-none">
-            <button type="button" onclick="updateQty(${item.id}, -1)" class="w-8 h-8 text-base font-semibold text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-r border-brown/20">-</button>
-            <span class="w-12 text-center text-xs font-mono font-semibold">${item.quantity}</span>
-            <button type="button" onclick="updateQty(${item.id}, 1)" class="w-8 h-8 text-base font-semibold text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-l border-brown/20">+</button>
-          </div>
-        </div>
-
-        <!-- TOTAL HARGA -->
-        <div class="text-left md:text-left font-mono text-xs md:text-sm font-bold text-brown w-full md:w-auto flex justify-between md:block">
-          <span class="md:hidden text-muted font-normal font-sans">Total Harga:</span>
-          <span>${formatRupiah(itemTotal)}</span>
-        </div>
-
-        <!-- AKSI -->
-        <div class="text-left w-full md:w-auto flex justify-between">
-          <button type="button" onclick="removeItem(${item.id})" class="text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors">
-            Hapus
-          </button>
-        </div>
-
+    <!-- KOLOM 2: PRODUK (Gambar + Teks) -->
+    <a href="${targetPage}?id=${item.id}" class="flex items-center gap-3 md:gap-4 w-full group hover:opacity-80 transition-opacity">
+      <img src="${item.image_url}" alt="${item.name}" 
+           class="w-14 h-14 md:w-20 md:h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none group-hover:border-brown/40 transition-colors" 
+           onerror="this.src='https://via.placeholder.com/80?text=No+Image'"/>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-serif font-semibold text-brown text-sm md:text-base leading-snug truncate group-hover:underline">${item.name}</h3>
+        <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase bg-brown/10 text-brown rounded-none">
+          ${item.file_format || "ZIP"}
+        </span>
       </div>
-    `;
+    </a>
+
+    <!-- KOLOM 3: HARGA SATUAN -->
+    <div class="text-left text-xs md:text-sm text-ink whitespace-nowrap">
+      <span>${formatRupiah(item.price)}</span>
+    </div>
+
+    <!-- KOLOM 4: KUANTITAS -->
+    <div class="flex items-center justify-start">
+      <div class="flex items-center border border-brown/20 bg-white rounded-none">
+        <button type="button" onclick="updateQty(${item.id}, -1)" class="w-6 h-6 md:w-8 md:h-8 text-xs md:text-base font-semibold text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-r border-brown/20">-</button>
+        <span class="w-8 md:w-12 text-center text-xs font-mono font-semibold">${item.quantity}</span>
+        <button type="button" onclick="updateQty(${item.id}, 1)" class="w-6 h-6 md:w-8 md:h-8 text-xs md:text-base font-semibold text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-l border-brown/20">+</button>
+      </div>
+    </div>
+
+    <!-- KOLOM 5: TOTAL HARGA -->
+    <div class="text-left font-mono text-xs md:text-sm font-bold text-brown whitespace-nowrap">
+      <span>${formatRupiah(itemTotal)}</span>
+    </div>
+
+    <!-- KOLOM 6: AKSI -->
+    <div class="text-left">
+      <button type="button" onclick="removeItem(${item.id})" class="text-xs font-medium text-red-500 hover:text-red-700 hover:underline transition-colors">
+        Hapus
+      </button>
+    </div>
+
+  </div>
+`;
   }).join("");
 
   updateSummary();
@@ -199,10 +196,27 @@ function deleteSelectedItems() {
 
 function checkout() {
   if (selectedItems.size === 0) {
-    alert("Silakan pilih minimal satu produk untuk di-checkout!");
+    if (typeof showToastSuccess === 'function') {
+      showToastSuccess("Pilih minimal 1 produk untuk melanjutkan checkout!");
+    } else {
+      alert("Silakan pilih minimal satu produk untuk di-checkout!");
+    }
     return;
   }
-  alert("Melanjutkan ke proses checkout...");
+
+  const cart = getCart();
+  const itemsToCheckout = cart.filter(item => selectedItems.has(item.id));
+
+  if (itemsToCheckout.length === 0) {
+    alert("Produk yang dipilih tidak ditemukan di keranjang.");
+    return;
+  }
+
+  // Simpan item yang akan di-checkout ke sessionStorage
+  sessionStorage.setItem('checkout_items', JSON.stringify(itemsToCheckout));
+
+  // Redirect ke halaman checkout
+  window.location.href = 'checkout.html';
 }
 
 document.addEventListener("DOMContentLoaded", renderCartPage);

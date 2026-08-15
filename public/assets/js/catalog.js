@@ -362,8 +362,45 @@ async function addToCart(productId) {
   }
 }
 
-function buyNow(productId) {
-  alert(`Melanjut ke checkout untuk Produk ID ${productId}`);
+async function buyNow(productId) {
+  // 1. Cari produk dari state global
+  let product = (window.allProducts || []).find(p => p.id === productId || p.id == productId);
+
+  // 2. Jika tidak ada di state global, ambil dari API
+  if (!product) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+      const data = await res.json();
+      if (data.success) product = data.product;
+    } catch (err) {
+      console.error('Gagal mengambil data produk:', err);
+    }
+  }
+
+  if (!product) {
+    alert('Produk tidak ditemukan. Silakan coba lagi.');
+    return;
+  }
+
+  // 3. Ambil URL gambar dari tampilan detail jika ada
+  const mainImgEl = document.getElementById('detail-main-image');
+  const imageUrl  = (mainImgEl && mainImgEl.src) ? mainImgEl.src : (product.image_url || '');
+
+  // 4. Buat item checkout
+  const checkoutItem = [{
+    id:          product.id,
+    name:        product.name,
+    price:       product.list_price,
+    image_url:   imageUrl,
+    file_format: product.x_file_format || 'ZIP',
+    x_digital_file_url: product.x_digital_file_url || product.x_drive_link || null,
+    drive_link:         product.x_digital_file_url || product.x_drive_link || null,
+    x_drive_link:       product.x_digital_file_url || product.x_drive_link || null,
+  }];
+
+  // 5. Simpan ke sessionStorage dan redirect
+  sessionStorage.setItem('checkout_items', JSON.stringify(checkoutItem));
+  window.location.href = 'checkout.html';
 }
 
 document.getElementById("btn-back-to-list")?.addEventListener("click", function () {
