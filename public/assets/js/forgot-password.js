@@ -11,9 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const email = emailInput.value.trim();
 
-    // Reset pesan
-    formMessage.classList.add('hidden');
-    formMessage.className = 'hidden text-sm font-medium text-center p-3 rounded-xl';
+    // Reset status pesan
+    hideMessage();
 
     if (!email) {
       showMessage('Silakan masukkan alamat email kamu.', 'error');
@@ -25,16 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.innerText = 'Mengirim...';
 
     try {
-      // Menentukan URL untuk pengarahan setelah user klik link di email
-      const redirectTo = `${window.location.origin}/public/reset-password.html`;
+      // Menentukan URL redirect secara dinamis berdasarkan lokasi halaman saat ini
+      const currentPath = window.location.pathname;
+      const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+      const redirectTo = `${window.location.origin}${basePath}/reset-password.html`;
 
       const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
         redirectTo: redirectTo,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       showMessage(
         'Tautan reset password telah dikirim ke email kamu. Silakan periksa kotak masuk/spam.',
@@ -53,11 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function showMessage(text, type) {
     formMessage.textContent = text;
     formMessage.classList.remove('hidden');
+    formMessage.className = `text-sm font-medium text-center p-3 rounded-xl ${
+      type === 'success'
+        ? 'bg-green-50 text-green-700 border border-green-200'
+        : 'bg-red-50 text-red-600 border border-red-200'
+    }`;
+  }
 
-    if (type === 'success') {
-      formMessage.classList.add('bg-green-50', 'text-green-700', 'border', 'border-green-200');
-    } else {
-      formMessage.classList.add('bg-red-50', 'text-red-600', 'border', 'border-red-200');
-    }
+  function hideMessage() {
+    formMessage.classList.add('hidden');
   }
 });

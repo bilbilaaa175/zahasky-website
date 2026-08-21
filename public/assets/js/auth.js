@@ -52,8 +52,11 @@ if (registerForm) {
     submitBtn.textContent = "Memproses...";
 
     try {
-      // Menggunakan origin browser secara dinamis agar sesuai dengan server lokal (Live Server)
-      const redirectUrl = `${window.location.origin}/public/login.html`;
+      // Menggunakan origin browser secara dinamis agar sesuai dengan server lokal (Live Server & localhost)
+      const isLiveServer = window.location.pathname.includes('/public/');
+      const redirectUrl = isLiveServer 
+        ? `${window.location.origin}/public/login.html` 
+        : `${window.location.origin}/login.html`;
 
       const { data, error } = await dbClient.auth.signUp({
         email: email,
@@ -395,22 +398,26 @@ function renderOrderHistory(badgeOnly = false) {
   listContainer.classList.remove('hidden');
 
   listContainer.innerHTML = orders.map((order, idx) => {
-    const date    = new Date(order.date);
-    const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // Validasi tanggal aman agar tidak crash
+    const rawDate = order.date ? new Date(order.date) : new Date();
+    const dateStr = isNaN(rawDate.getTime()) ? '-' : rawDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
     const statusLabel = getOrderStatusLabel(order.status);
     const statusColor = getOrderStatusColor(order.status);
     const hasPhysical = order.has_physical;
     const hasDigital  = order.has_digital;
 
-    // Item preview (max 2 thumbnail)
-    const previewImgs = order.items.slice(0, 3).map(item =>
-      `<img src="${item.image_url || ''}" alt="${item.name}"
+    const items = order.items || [];
+
+    // Item preview (max 3 thumbnail)
+    const previewImgs = items.slice(0, 3).map(item =>
+      `<img src="${item.image_url || ''}" alt="${item.name || ''}"
             class="w-10 h-10 object-cover border border-brown/10 rounded-sm"
             onerror="this.src='https://via.placeholder.com/40?text=?'" />`
     ).join('');
 
     return `
-      <div class="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
+      <div class="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden mb-4">
 
         <!-- ── CARD HEADER (Selalu Tampil) ── -->
         <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer select-none hover:bg-gray-50 transition-colors"
@@ -419,7 +426,7 @@ function renderOrderHistory(badgeOnly = false) {
           <!-- Thumbnails -->
           <div class="flex items-center gap-1.5 shrink-0">
             ${previewImgs}
-            ${order.items.length > 3 ? `<span class="text-[10px] text-muted font-semibold ml-1">+${order.items.length - 3}</span>` : ''}
+            ${items.length > 3 ? `<span class="text-[10px] text-muted font-semibold ml-1">+${items.length - 3}</span>` : ''}
           </div>
 
           <!-- Info -->
@@ -430,8 +437,8 @@ function renderOrderHistory(badgeOnly = false) {
               ${hasPhysical ? '<span class="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">Fisik</span>' : ''}
               ${hasDigital ? '<span class="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Digital</span>' : ''}
             </div>
-            <p class="text-xs text-muted">${dateStr} · ${order.payment_method}${order.payment_sub && order.payment_sub !== order.payment_method ? ' (' + order.payment_sub + ')' : ''}</p>
-            <p class="text-xs text-muted mt-0.5">${order.items.length} produk · <span class="font-mono font-bold text-brown">${formatRpStatic(order.total)}</span></p>
+            <p class="text-xs text-muted">${dateStr} · ${order.payment_method || 'Pembayaran'}${order.payment_sub && order.payment_sub !== order.payment_method ? ' (' + order.payment_sub + ')' : ''}</p>
+            <p class="text-xs text-muted mt-0.5">${items.length} produk · <span class="font-mono font-bold text-brown">${formatRpStatic(order.total)}</span></p>
           </div>
 
           <!-- Chevron -->
@@ -449,7 +456,7 @@ function renderOrderHistory(badgeOnly = false) {
             <div>
               <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Produk yang Dipesan</p>
               <div class="space-y-3">
-                ${order.items.map(item => renderOrderItemCard(item, order.status)).join('')}
+                ${items.map(item => renderOrderItemCard(item, order.status, order.drive_link)).join('')}
               </div>
             </div>
 
@@ -482,35 +489,44 @@ function renderOrderHistory(badgeOnly = false) {
   }).join('');
 }
 
-/** Render satu baris item dalam order detail */
 /**
  * Render kartu item produk di Riwayat Pesanan
  */
-function renderOrderItemCard(item, orderStatus) {
+function renderOrderItemCard(item, orderStatus, parentDriveLink = null) {
   const isDigital = !['publicity'].includes((item.page_type || '').toLowerCase());
-  
-  // Link drive bisa dari item langsung atau dari data Odoo
-  let driveLink = item.x_digital_file_url || item.drive_link || item.x_drive_link || null;
-  
-  // Cek apakah pembayaran sudah LUNAS
+ 
+  // Link drive mengecek dari item langsung atau dari order induk
+  let driveLink = item.x_digital_file_url || item.drive_link || item.x_drive_link || parentDriveLink || null;
+ 
+  // Cek apakah pembayaran/sales order sudah dikonfirmasi
   const isPaid = ['PAID', 'SUCCEEDED', 'SETTLED', 'CONFIRMED', 'COMPLETED', 'SALE', 'DONE'].includes((orderStatus || '').toUpperCase());
 
-  // Auto-fetch link Google Drive dari Odoo via API jika belum tersimpan di item lokal
-  if (isDigital && isPaid && !driveLink && item.id) {
+  // Auto-fetch link Google Drive dari Odoo via API jika belum tersimpan (dikunci flag _isFetching agar tidak infinite loop)
+  if (isDigital && isPaid && !driveLink && item.id && !item._isFetching) {
+    item._isFetching = true; // Kunci agar tidak looping
     fetch(`/api/products/${item.id}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.product && data.product.x_digital_file_url) {
-          item.x_digital_file_url = data.product.x_digital_file_url;
-          item.drive_link = data.product.x_digital_file_url;
+          const fetchedUrl = data.product.x_digital_file_url;
           
-          // Update localStorage
+          // Update data di localStorage secara akurat
           try {
             let history = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
+            history.forEach(ord => {
+              if (ord.items) {
+                ord.items.forEach(it => {
+                  if (it.id === item.id) {
+                    it.x_digital_file_url = fetchedUrl;
+                    it.drive_link = fetchedUrl;
+                  }
+                });
+              }
+            });
             localStorage.setItem('zahasky_order_history', JSON.stringify(history));
           } catch(e) {}
 
-          // Render ulang UI agar tombol langsung muncul
+          // Render ulang UI hanya 1 kali setelah data ter-update
           renderOrderHistory();
         }
       })
@@ -519,7 +535,7 @@ function renderOrderItemCard(item, orderStatus) {
 
   return `
     <div class="flex gap-3 py-3 border-b border-gray-50 last:border-0">
-      <img src="${item.image_url || ''}" alt="${item.name}"
+      <img src="${item.image_url || ''}" alt="${item.name || ''}"
            class="w-14 h-14 object-cover border border-brown/10 rounded-sm shrink-0"
            onerror="this.src='https://via.placeholder.com/56?text=?'" />
       <div class="flex-1 min-w-0">
@@ -537,7 +553,7 @@ function renderOrderItemCard(item, orderStatus) {
             <a href="${driveLink}" target="_blank" rel="noopener noreferrer"
                class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 6 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
               </svg>
               <span>Buka Link Google Drive</span>
             </a>
@@ -577,10 +593,10 @@ function renderShippingAddressBlock(addr) {
 /** Render timeline status pengiriman (untuk produk Publicity) */
 function renderDeliveryTimeline(status) {
   const steps = [
-    { key: 'processing', label: 'Pesanan Diterima',  icon: '📋', desc: 'Pesanan kamu sedang diverifikasi oleh tim Zahasky.' },
+    { key: 'processing', label: 'Pesanan Diterima',   icon: '📋', desc: 'Pesanan kamu sedang diverifikasi oleh tim Zahasky.' },
     { key: 'confirmed',  label: 'Pesanan Dikonfirmasi', icon: '✅', desc: 'Pembayaran terkonfirmasi, pesanan sedang dipersiapkan.' },
-    { key: 'shipped',    label: 'Dalam Pengiriman',  icon: '🚚', desc: 'Paket sedang dalam perjalanan menuju alamatmu.' },
-    { key: 'delivered',  label: 'Pesanan Selesai',   icon: '🎉', desc: 'Paket telah diterima. Terima kasih sudah berbelanja!' },
+    { key: 'shipped',    label: 'Dalam Pengiriman',   icon: '🚚', desc: 'Paket sedang dalam perjalanan menuju alamatmu.' },
+    { key: 'delivered',  label: 'Pesanan Selesai',    icon: '🎉', desc: 'Paket telah diterima. Terima kasih sudah berbelanja!' },
   ];
 
   const statusOrder = ['processing', 'confirmed', 'shipped', 'delivered'];

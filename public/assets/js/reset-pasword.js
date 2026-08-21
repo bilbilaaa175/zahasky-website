@@ -5,12 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const formMessage = document.getElementById('form-message');
   const submitBtn = document.getElementById('submit-btn');
 
-  // Toggle Password Visibilities
+  // Pasang toggle mata
   setupTogglePassword('toggle-new-password', 'new-password');
   setupTogglePassword('toggle-confirm-password', 'confirm-password');
 
   if (!resetForm) return;
 
+  // Tahan form submit biasa agar URL tidak berubah membawa query password
   resetForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -19,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     hideMessage();
 
-    // Validasi input
     if (!newPassword || !confirmPassword) {
       showMessage('Silakan isi kedua kolom password.', 'error');
       return;
@@ -35,21 +35,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Loading State
     submitBtn.disabled = true;
     submitBtn.innerText = 'Menyimpan...';
 
     try {
-      // Supabase membaca token pemulihan secara otomatis dari hash URL
       const { error } = await supabaseClient.auth.updateUser({
         password: newPassword,
       });
 
       if (error) throw error;
 
-      showMessage('Password berhasil diperbarui! Mengalihkan ke halaman login...', 'success');
+      showMessage('Password berhasil diperbarui! Mengalihkan ke login...', 'success');
 
-      // Redirect ke login dalam 2 detik
+      await supabaseClient.auth.signOut();
+
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 2000);
@@ -65,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Helper fungsi notifikasi
   function showMessage(text, type) {
     formMessage.textContent = text;
     formMessage.classList.remove('hidden');
@@ -80,20 +78,27 @@ document.addEventListener('DOMContentLoaded', () => {
     formMessage.classList.add('hidden');
   }
 
-  // Helper fungsi toggle ketersediaan mata
+  // Helper Toggle Eye (Fix Unhide/Hide)
   function setupTogglePassword(btnId, inputId) {
     const btn = document.getElementById(btnId);
     const input = document.getElementById(inputId);
     if (!btn || !input) return;
 
-    const eye = btn.querySelector('.icon-eye');
-    const eyeOff = btn.querySelector('.icon-eye-off');
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
 
-    btn.addEventListener('click', () => {
-      const isHidden = input.type === 'password';
-      input.type = isHidden ? 'text' : 'password';
-      eye.classList.toggle('hidden', isHidden);
-      eyeOff.classList.toggle('hidden', !isHidden);
+      // Menggunakan currentTarget agar elemen SVG selalu ketemu
+      const targetBtn = e.currentTarget;
+      const eyeIcon = targetBtn.querySelector('.icon-eye');
+      const eyeOffIcon = targetBtn.querySelector('.icon-eye-off');
+
+      if (eyeIcon && eyeOffIcon) {
+        eyeIcon.classList.toggle('hidden', isPassword);
+        eyeOffIcon.classList.toggle('hidden', !isPassword);
+      }
     });
   }
 });

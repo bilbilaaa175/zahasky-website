@@ -271,13 +271,14 @@ app.post('/api/payment/ewallet', async (req, res) => {
 // =========================================================================
 // Endpoint 3: Webhook Xendit (Menerima Notifikasi Bayar Otomatis)
 // Mendukung /api/xendit/webhook dan /api/webhook/xendit
+// Endpoint Webhook Xendit (Menerima Notifikasi Bayar Otomatis)
 // =========================================================================
 const handleXenditWebhook = async (req, res) => {
     try {
-        // 1. Verifikasi Verification Token dari Header HTTP Xendit (jika dikonfigurasi)
         const xenditTokenHeader = req.headers['x-callback-token'];
 
-        if (process.env.XENDIT_WEBHOOK_TOKEN && xenditTokenHeader && xenditTokenHeader !== process.env.XENDIT_WEBHOOK_TOKEN) {
+        // 1. Verifikasi Token Keamanan (Diperbaiki agar header kosong tidak lolos)
+        if (process.env.XENDIT_WEBHOOK_TOKEN && xenditTokenHeader !== process.env.XENDIT_WEBHOOK_TOKEN) {
             console.warn("⚠️ [SECURITY ALERT] Webhook ditolak! Verification Token tidak cocok.");
             return res.status(403).json({ success: false, message: "Invalid Verification Token" });
         }
@@ -285,19 +286,27 @@ const handleXenditWebhook = async (req, res) => {
         // 2. Baca Data Callback dari Xendit
         const callbackData = req.body;
         const externalId = callbackData.external_id || callbackData.externalId || callbackData.reference_id;
-        const status = (callbackData.status || callbackData.paid_status || callbackData.event || '').toUpperCase();
+        
+        // Ambil status dari berbagai jenis payload Xendit (Invoice, E-Wallet, VA)
+        const rawStatus = (callbackData.status || callbackData.paid_status || callbackData.event || '').toUpperCase();
 
-        console.log(`\n🔔 [Webhook Xendit] Notifikasi masuk untuk Reference: ${externalId} | Status: ${status}`);
+        console.log(`\n🔔 [Webhook Xendit] Notifikasi masuk untuk Reference: ${externalId} | Status Raw: ${rawStatus || 'PAYMENT_EVENT'}`);
 
-        // 3. Validasi apakah status pembayaran adalah PAID / SETTLED / SUCCEEDED
-        const isPaidStatus = ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'INVOICE.PAID', 'VIRTUAL_ACCOUNT.PAID'].some(s => status.includes(s));
+        // 3. Validasi Pembayaran Lunas
+        // Catatan: Callback VA Xendit tidak punya field status, keberadaan external_id di event VA = LUNAS.
+        const isVAPayment = callbackData.callback_virtual_account_id || callbackData.account_number;
+        const isPaidStatus = isVAPayment || ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'INVOICE.PAID', 'VIRTUAL_ACCOUNT.PAID'].some(s => rawStatus.includes(s));
 
         if (isPaidStatus && externalId) {
             console.log(`✓ [Webhook] Pembayaran LUNAS (${externalId}). Mengonfirmasi Quotation di Odoo...`);
             
             try {
-                // Konfirmasi Quotation (sale.order) di Odoo menjadi Sales Order (state: 'sale')
-                await confirmSalesOrderByRef(externalId);
+                // Pastikan nama fungsi ini sama dengan di odooService.js (confirmSalesOrderByRef atau confirmOdooOrder)
+                if (typeof confirmSalesOrderByRef === 'function') {
+                    await confirmSalesOrderByRef(externalId);
+                } else if (typeof confirmOdooOrder === 'function') {
+                    await confirmOdooOrder(externalId);
+                }
                 console.log(`🎉 [Odoo Delivery] Quotation (${externalId}) sukses dikonfirmasi di Odoo!`);
             } catch (odooConfirmErr) {
                 console.error(`⚠️ [Odoo Confirm Error]: ${odooConfirmErr.message}`);
@@ -349,26 +358,114 @@ app.post('/api/payment/ewallet', async (req, res) => {
   }
 });
 
+// 1. ENDPOINT: Create Virtual Account (Transfer Bank)
+app.post('/api/payment/va', async (req, res) => {
+    try {
+        const { orderId, amount, bankCode, customerName } = req.body;
+        
+        const response = await fetch('https://api.xendit.co/callback_virtual_accounts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
+            },
+            body: JSON.stringify({
+                external_id: orderId,
+                bank_code: bankCode.toUpperCase(),
+                name: customerName || 'Customer Zahasky',
+                expected_amount: amount,
+                is_closed: true,
+                expiration_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            })
+        });
+        const vaData = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(vaData.message || vaData.error_code || 'Gagal membuat Virtual Account');
+        }
+
+        res.json({
+            success: true,
+            orderId: orderId,
+            bank: vaData.bank_code,
+            vaNumber: vaData.account_number,
+            amount: vaData.expected_amount,
+            expirationDate: vaData.expiration_date,
+            status: 'PENDING'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 2. ENDPOINT: Create E-Wallet Charge
+app.post('/api/payment/ewallet', async (req, res) => {
+    try {
+        const { orderId, amount, ewalletType, phone } = req.body;
+        const response = await fetch('https://api.xendit.co/ewallets/charges', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
+            },
+            body: JSON.stringify({
+                reference_id: orderId,
+                currency: 'IDR',
+                amount: amount,
+                checkout_method: 'ONE_TIME_PAYMENT',
+                channel_code: `ID_${ewalletType.toUpperCase()}`,
+                channel_properties: {
+                    mobile_number: phone || '081234567890',
+                    success_redirect_url: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`
+                }
+            })
+        });
+        const ewalletData = await response.json();
+        
+        // Pengecekan Error jika response Xendit gagal
+        if (!response.ok) {
+            throw new Error(ewalletData.message || ewalletData.error_code || 'Gagal membuat E-Wallet Charge');
+        }
+        
+        const actions = ewalletData.actions || {};
+        const checkoutUrl = actions.desktop_web_checkout_url || actions.mobile_web_checkout_url || actions.qr_checkout_string;
+        
+        res.json({
+            success: true,
+            orderId: orderId,
+            checkoutUrl: checkoutUrl,
+            status: 'PENDING'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // 3. ENDPOINT: Polling Cek Status Pembayaran (Untuk QRIS & VA)
 app.get('/api/payment/status/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
         
-        // Cek status order di database local / Odoo
-        // Mengembalikan status terkini
-        const digitalInfo = await getDigitalUrlByOrderId(orderId).catch(() => null);
+        const digitalInfo = await getDigitalUrlByOrderId(orderId);
         const isPaid = digitalInfo && (digitalInfo.orderState === 'sale' || digitalInfo.orderState === 'done');
+
         res.json({
             success: true,
             orderId: orderId,
             status: isPaid ? 'PAID' : 'PENDING',
+            orderState: digitalInfo ? digitalInfo.orderState : 'draft',
             driveLink: isPaid ? digitalInfo.driveLink : null
         });
     } catch (error) {
-        res.status(500).json({ success: false, status: 'PENDING' });
+        console.warn(`⚠️ [Status Check Warn]: ${error.message}`);
+        res.status(200).json({ 
+            success: false, 
+            status: 'PENDING', 
+            driveLink: null,
+            message: error.message 
+        });
     }
 });
-
 // =========================================================================
 // Menjalankan Server Middleware Node.js
 // =========================================================================

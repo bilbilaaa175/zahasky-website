@@ -20,110 +20,87 @@
 <body class="antialiased font-sans bg-white text-ink min-h-screen flex flex-col justify-between">
 
   <!-- ============================================= -->
-  <!-- 1. HEADER — MAIN NAVBAR + SUB-NAVBAR           -->
-  <!-- ============================================= -->
-  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-brown/10">
-    <div class="max-w-7xl mx-auto px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
-      <!-- Kiri: Logo -->
-      <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">
-        Zahasky.
-      </a>
+<!-- 1. HEADER — MAIN NAVBAR + SUB-NAVBAR           -->
+<!-- ============================================= -->
+<header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-brown/10">
+  <div class="max-w-7xl mx-auto px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
+    <!-- Kiri: Logo -->
+    <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">
+      Zahasky.
+    </a>
 
-      <!-- Tengah: Menu Utama (desktop) -->
-      <nav class="hidden md:flex items-center gap-10 text-base">
-        <a href="index.html" class="nav-link">Home</a>
-        <a href="catalog.html" class="nav-link">Catalog</a>
-        <a href="package.html" class="nav-link">Package</a>
-        <a href="publicity.html" class="nav-link">Publicity</a>
-        <a href="contact.html" class="nav-link">Contact</a>
-      </nav>
+    <!-- Tengah: Menu Utama (desktop) -->
+    <nav class="hidden md:flex items-center gap-10 text-base">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="catalog.html" class="nav-link">Catalog</a>
+      <a href="package.html" class="nav-link">Package</a>
+      <a href="publicity.html" class="nav-link">Publicity</a>
+      <a href="contact.html" class="nav-link">Contact</a>
+    </nav>
 
-      <!-- Kanan: Cart, Auth Status (desktop) + Hamburger (mobile) -->
-      <div class="flex items-center gap-2 md:gap-4">
-        
-        <!-- Icon Keranjang Belanja + badge counter -->
-        <button type="button" aria-label="Keranjang belanja" class="relative p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 0 0 2 1.65h8.1a2 2 0 0 0 2-1.65L20 7H6" />
-            <circle cx="9.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
-            <circle cx="16.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
-          </svg>
-          <span id="cart-count" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brown text-cream text-[10px] font-mono font-semibold leading-none">
-            0
-          </span>
-        </button>
+    <!-- Kanan: Cart, Auth Status (desktop) + Hamburger (mobile) -->
+    <div class="flex items-center gap-2 md:gap-4">
+      
+      <!-- Icon Keranjang Belanja -->
+      <button type="button" aria-label="Keranjang belanja" class="relative p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 0 0 2 1.65h8.1a2 2 0 0 0 2-1.65L20 7H6" />
+          <circle cx="9.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="16.5" cy="19.5" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+        <span id="cart-count" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brown text-cream text-[10px] font-mono font-semibold leading-none">
+          0
+        </span>
+      </button>
 
-        <!-- KONDISI 1: Guest (Belum Login) - DESKTOP -->
-        <div id="guest-nav" class="flex items-center gap-4">
-          <a href="login.html" class="text-base nav-link">
-            Login
-          </a>
-          <a href="register.html">
-            <button 
-              type="button" 
-              class="rounded-pill bg-brown text-cream text-base font-semibold px-5 py-2.5 hover:bg-brown/80 transition-colors cursor-pointer"
-            >
-              Register
-            </button>
-          </a>
-        </div>
-
-        <!-- KONDISI 2: User (Sudah Login) - DESKTOP -->
-        <div id="user-nav" class="hidden items-center">
-          <a href="profile.html" title="Profil Saya" class="p-2 rounded-full text-ink hover:bg-brown/5 transition-colors cursor-pointer flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-            </svg>
-          </a>
-        </div>
-
-        <!-- Hamburger toggle (mobile only) -->
-        <button
-          type="button"
-          id="mobile-menu-toggle"
-          aria-label="Buka menu"
-          aria-expanded="false"
-          aria-controls="mobile-menu"
-          class="md:hidden p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer"
-        >
-          <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
+      <!-- KONDISI 1: Guest (Belum Login) -->
+      <div id="guest-nav" class="hidden items-center gap-4">
+        <a href="login.html" class="text-base nav-link">Login</a>
+        <a href="register.html">
+          <button type="button" class="rounded-pill bg-brown text-cream text-base font-semibold px-5 py-2.5 hover:bg-brown/80 transition-colors cursor-pointer">
+            Register
+          </button>
+        </a>
       </div>
 
-      <!-- Mobile Menu (dropdown) -->
-      <div id="mobile-menu" class="md:hidden hidden flex-col border-t border-brown/10 bg-white px-6 py-4 gap-1">
-        <a href="index.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Home</a>
-        <a href="catalog.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Catalog</a>
-        <a href="package.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Package</a>
-        <a href="publicity.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Publicity</a>
-        <a href="contact.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70">Contact</a>
-
-        <div id="mobile-guest-nav" class="flex items-center gap-3 mt-4">
-          <a href="login.html" class="flex-1">
-            <button type="button" class="w-full text-sm font-semibold text-gray-500 border border-brown/20 rounded-pill py-2.5 hover:bg-brown/5 transition-colors cursor-pointer">Login</button>
-          </a>
-          <a href="register.html" class="flex-1">
-            <button type="button" class="w-full rounded-pill bg-brown text-cream text-sm font-semibold py-2.5 hover:bg-brown/80 transition-colors cursor-pointer">Register</button>
-          </a>
-        </div>
-
-        <div id="mobile-user-nav" class="hidden mt-4 pt-3 border-t border-brown/10">
-          <a href="profile.html" class="flex items-center gap-2 py-2 text-base font-semibold text-brown hover:opacity-80">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-            </svg>
-            <span>Profil Saya</span>
-          </a>
-        </div>
+      <!-- KONDISI 2: User (Sudah Login) -->
+      <div id="user-nav" class="hidden items-center">
+        <a href="profile.html" title="Profil Saya" class="p-2 rounded-full text-ink hover:bg-brown/5 transition-colors cursor-pointer flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+        </a>
       </div>
+
+      <!-- Hamburger toggle (mobile only) -->
+      <button
+        type="button"
+        id="mobile-menu-toggle"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        class="md:hidden p-2 rounded-full hover:bg-brown/5 transition-colors cursor-pointer"
+      >
+        <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-ink hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
     </div>
-  </header>
+  </div>
+
+  <!-- Mobile Menu (Di-floating menggunakan absolute agar melayang penuh di bawah header) -->
+  <div id="mobile-menu" class="hidden absolute top-full left-0 w-full bg-white border-b border-brown/10 shadow-lg px-6 py-4 flex-col gap-1 md:hidden z-50">
+    <a href="index.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Home</a>
+    <a href="catalog.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Catalog</a>
+    <a href="package.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Package</a>
+    <a href="publicity.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Publicity</a>
+    <a href="contact.html" class="py-2.5 text-base font-medium text-gray-400 hover:text-brown/70 border-b border-brown/5">Contact</a>
+  </div>
+</header>
 
   <!-- ============================================= -->
   <!-- MAIN CONTENT — HALAMAN PROFIL                 -->
@@ -131,21 +108,28 @@
   <main class="max-w-4xl mx-auto px-6 md:px-12 py-10 w-full flex-grow">
     
     <!-- Greeting & Logout Button -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-      <div>
-        <h1 id="user-greeting" class="font-serif text-2xl md:text-3xl font-bold text-brown">Halo, Pengguna</h1>
-        <p class="text-xs md:text-sm text-gray-500 mt-1">Kelola data profil, keamanan akun, dan riwayat pesanan Anda di sini.</p>
-      </div>
-      <button id="logout-btn" type="button" class="flex items-center gap-2 border border-brown/20 text-brown hover:bg-brown/5 px-4 py-2 rounded-full text-xs md:text-sm font-semibold transition-colors cursor-pointer">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 aspect-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-          <polyline points="16 17 21 12 16 7" />
-          <line x1="21" y1="12" x2="9" y2="12" />
-        </svg>
-        <span>Keluar</span>
-      </button>
-    </div>
+    <div class="mb-8">
+        <!-- Baris 1: Nama Pengguna + Tombol Keluar (Sejajar di HP & Desktop) -->
+        <div class="flex items-center justify-between gap-3">
+          <h1 id="user-greeting" class="font-serif text-xl md:text-3xl font-bold text-brown truncate">
+            Halo, Pengguna
+          </h1>
 
+          <button id="logout-btn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 rounded-full transition-colors shrink-0 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Keluar</span>
+          </button>
+        </div>
+
+        <!-- Baris 2: Subtitle/Deskripsi -->
+        <p class="text-xs md:text-sm text-gray-500 mt-1.5 leading-relaxed">
+          Kelola data profil, keamanan akun, dan riwayat pesanan Anda di sini.
+        </p>
+    </div>
     <!-- Alert Message Box -->
     <div id="profile-message" class="hidden mb-6 p-4 rounded-2xl text-sm font-medium"></div>
 
