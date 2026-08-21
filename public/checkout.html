@@ -209,15 +209,9 @@
   <header class="sticky top-0 z-50 bg-white border-b border-brown/10 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
 
-      <!-- Logo + Breadcrumb "Checkout" -->
+      <!-- Logo -->
       <div class="flex items-center gap-3">
         <a href="index.html" class="font-serif font-bold text-xl md:text-2xl text-brown tracking-tight">Zahasky.</a>
-        <span class="hidden sm:flex items-center gap-2 text-muted text-sm">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-          </svg>
-          <span class="text-brown font-semibold">Checkout</span>
-        </span>
       </div>
 
       <nav class="hidden md:flex items-center gap-10 text-base font-medium text-ink">
@@ -280,8 +274,8 @@
       <a href="catalog.html" class="inline-block bg-brown text-cream text-sm font-semibold px-6 py-3 hover:bg-ink transition-colors">Lihat Katalog</a>
     </div>
 
-    <!-- Checkout content — 2 column layout -->
-    <div id="checkout-content" class="hidden lg:grid lg:grid-cols-[1fr_360px] gap-6 xl:gap-8 items-start">
+    <!-- Checkout content — Responsive layout (single column mobile, 2 column desktop) -->
+    <div id="checkout-content" class="hidden flex flex-col lg:grid lg:grid-cols-[1fr_360px] gap-6 xl:gap-8 items-start">
 
       <!-- ── LEFT COLUMN ── -->
       <div class="space-y-5">
@@ -396,32 +390,35 @@
             </div>
           </div>
 
+
+
           <!-- Tab: E-Wallet -->
           <div id="panel-ewallet" class="p-5 hidden">
+            <p class="text-xs text-muted mb-3">Kamu akan diarahkan langsung ke aplikasi e-wallet pilihan setelah klik "Buat Pesanan".</p>
             <div class="space-y-3">
               <!-- DANA -->
               <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'DANA', this)">
                 <input type="radio" name="pay-method" id="pay-dana" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                    <span class="text-white font-bold text-xs">DANA</span>
+                  <div class="w-16 h-9 rounded-md bg-[#118EEA] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_DANA.svg" alt="DANA" class="h-6 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-blue-600 text-xs\'>DANA</span>';" />                  
                   </div>
                   <div>
                     <p class="font-semibold text-sm text-ink">DANA</p>
-                    <p class="text-xs text-muted">Bayar via aplikasi DANA</p>
+                    <p class="text-xs text-muted">Langsung ke aplikasi DANA</p>
                   </div>
                 </div>
               </div>
               <!-- GoPay -->
-              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'GoPay', this)">
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'GOPAY', this)">
                 <input type="radio" name="pay-method" id="pay-gopay" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                    <span class="text-white font-bold text-xs">GO</span>
+                  <div class="w-16 h-9 rounded-md bg-[#00880C] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/86/Gopay_logo.svg" alt="GoPay" class="h-6 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-green-600 text-xs\'>GoPay</span>';" />                  
                   </div>
                   <div>
                     <p class="font-semibold text-sm text-ink">GoPay</p>
-                    <p class="text-xs text-muted">Bayar via GoPay / Gojek</p>
+                    <p class="text-xs text-muted">Langsung ke GoPay / Gojek</p>
                   </div>
                 </div>
               </div>
@@ -429,91 +426,135 @@
               <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'OVO', this)">
                 <input type="radio" name="pay-method" id="pay-ovo" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center shrink-0">
-                    <span class="text-white font-bold text-xs">OVO</span>
+                  <div class="w-16 h-9 rounded-md bg-[#4C2A86] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Logo_ovo_purple.svg/960px-Logo_ovo_purple.svg.png?utm_source=id.wikipedia.org&utm_campaign=index&utm_content=thumbnail" alt="OVO" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-purple-400 text-xs\'>OVO</span>';" />
                   </div>
                   <div>
                     <p class="font-semibold text-sm text-ink">OVO</p>
-                    <p class="text-xs text-muted">Bayar via OVO</p>
+                    <p class="text-xs text-muted">Langsung ke aplikasi OVO</p>
+                  </div>
+                </div>
+              </div>
+              <!-- ShopeePay -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('E-Wallet', 'SHOPEEPAY', this)">
+                <input type="radio" name="pay-method" id="pay-shopeepay" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-16 h-9 rounded-md bg-[#EE4D2D] flex items-center justify-center shrink-0 shadow-xs px-1">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/960px-Shopee.svg.png?utm_source=id.wikipedia.org&utm_campaign=index&utm_content=thumbnail" alt="ShopeePay" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-red-600 text-xs\'>ShopeePay</span>';" />
+                  </div>
+                  <div>
+                    <p class="font-semibold text-sm text-ink">ShopeePay</p>
+                    <p class="text-xs text-muted">Langsung ke aplikasi ShopeePay</p>
                   </div>
                 </div>
               </div>
             </div>
-            <!-- Instruksi E-Wallet -->
-            <div id="ewallet-instruction" class="hidden mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 space-y-1">
-              <p class="font-semibold">Instruksi Pembayaran via <span id="ewallet-name">E-Wallet</span>:</p>
-              <p>1. Buka aplikasi <span id="ewallet-name-2">E-Wallet</span> di smartphone kamu.</p>
-              <p>2. Pilih menu "Kirim Uang" atau "Transfer".</p>
-              <p>3. Masukkan nomor: <span class="font-mono font-bold">0895-2394-1316</span> (a.n. Zahasky Studio)</p>
-              <p>4. Masukkan nominal sesuai total tagihan, lalu konfirmasi.</p>
-              <p>5. Kirim bukti transfer via WhatsApp ke <span class="font-bold">+62 895 2394 1316</span>.</p>
+            <!-- Info E-Wallet -->
+            <div id="ewallet-instruction" class="hidden mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800 space-y-1">
+              <p class="font-semibold">✓ <span id="ewallet-name">E-Wallet</span> dipilih.</p>
+              <p>Klik "Buat Pesanan" — kamu otomatis diarahkan ke aplikasi <span id="ewallet-name-2">E-Wallet</span>.</p>
             </div>
           </div>
 
-          <!-- Tab: Transfer Bank -->
+          <!-- Tab: Transfer Bank (Virtual Account Xendit) -->
           <div id="panel-bank" class="p-5 hidden">
+            <p class="text-xs text-muted mb-3">Pilih bank — kamu langsung diarahkan ke halaman Virtual Account bank yang dipilih di Xendit.</p>
             <div class="space-y-3">
               <!-- BCA -->
               <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BCA', this)">
                 <input type="radio" name="pay-method" id="pay-bca" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-12 h-8 bg-blue-600 flex items-center justify-center shrink-0 rounded">
-                    <span class="text-white font-bold text-xs">BCA</span>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-sm text-ink">Bank BCA</p>
-                    <p class="text-xs text-muted font-mono">1234 5678 90 — a.n. Zahasky Studio</p>
-                  </div>
+                  <div class="w-16 h-9 rounded-md bg-[#003B7A] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia.svg" alt="Bank BCA" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-blue-800 text-xs\'>BCA</span>';" />
+                  </div>                  
+                  <p class="font-semibold text-sm text-ink">Bank BCA</p>
                 </div>
               </div>
               <!-- Mandiri -->
-              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'Mandiri', this)">
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'MANDIRI', this)">
                 <input type="radio" name="pay-method" id="pay-mandiri" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-12 h-8 bg-yellow-500 flex items-center justify-center shrink-0 rounded">
-                    <span class="text-white font-bold text-[10px]">MANDIRI</span>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-sm text-ink">Bank Mandiri</p>
-                    <p class="text-xs text-muted font-mono">1100 0987 6543 — a.n. Zahasky Studio</p>
-                  </div>
+                  <div class="w-16 h-9 rounded-md bg-[#002D62] flex items-center justify-center shrink-0 shadow-xs border-r-4 border-r-[#FFB600]">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/ad/Bank_Mandiri_logo_2016.svg" alt="Bank Mandiri" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-yellow-600 text-xs\'>MANDIRI</span>';" />
+                  </div>                  
+                  <p class="font-semibold text-sm text-ink">Bank Mandiri</p>
                 </div>
               </div>
               <!-- BNI -->
               <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BNI', this)">
                 <input type="radio" name="pay-method" id="pay-bni" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-12 h-8 bg-orange-600 flex items-center justify-center shrink-0 rounded">
-                    <span class="text-white font-bold text-xs">BNI</span>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-sm text-ink">Bank BNI</p>
-                    <p class="text-xs text-muted font-mono">0321 5678 901 — a.n. Zahasky Studio</p>
-                  </div>
+                  <div class="w-16 h-9 rounded-md bg-[#005E6A] flex items-center justify-center shrink-0 shadow-xs border-r-4 border-r-[#F15A24]">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Bank_Negara_Indonesia_logo_%282004%3B_with_slogan%29.svg/120px-Bank_Negara_Indonesia_logo_%282004%3B_with_slogan%29.svg.png" alt="Bank BNI" class="h-4 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-orange-600 text-xs\'>BNI</span>';" />
+                  </div>                  
+                  <p class="font-semibold text-sm text-ink">Bank BNI</p>
                 </div>
               </div>
               <!-- BRI -->
               <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BRI', this)">
                 <input type="radio" name="pay-method" id="pay-bri" class="accent-brown w-4 h-4 shrink-0" />
                 <div class="flex items-center gap-3 flex-1">
-                  <div class="w-12 h-8 bg-blue-800 flex items-center justify-center shrink-0 rounded">
-                    <span class="text-white font-bold text-xs">BRI</span>
+                  <div class="w-16 h-9 rounded-md bg-[#00529C] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/BRI_2020.svg" alt="Bank BRI" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-blue-900 text-xs\'>BRI</span>';" />
+                  </div>                 
+                  <p class="font-semibold text-sm text-ink">Bank BRI</p>
+                </div>
+              </div>
+              <!-- Permata -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'PERMATA', this)">
+                <input type="radio" name="pay-method" id="pay-permata" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-16 h-9 rounded-md bg-[#008779] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Permata_Bank_%282024%29.svg/960px-Permata_Bank_%282024%29.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail&_=20240929144104" alt="Permata Bank" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-cyan-700 text-[10px]\'>PERMATA</span>';" />
                   </div>
-                  <div>
-                    <p class="font-semibold text-sm text-ink">Bank BRI</p>
-                    <p class="text-xs text-muted font-mono">0102 0100 4321 — a.n. Zahasky Studio</p>
+                  <p class="font-semibold text-sm text-ink">Bank Permata</p>
                   </div>
+              </div>
+              <!-- BSI -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BSI', this)">
+                <input type="radio" name="pay-method" id="pay-bsi" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-16 h-9 rounded-md bg-[#00A39E] flex items-center justify-center shrink-0 shadow-xs border-r-4 border-r-[#FFB600]">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a0/Bank_Syariah_Indonesia.svg" alt="Bank BSI" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-teal-700 text-xs\'>BSI</span>';" />
+                  </div>
+                  <p class="font-semibold text-sm text-ink">Bank BSI</p>
+                </div>
+              </div>
+              <!-- BJB -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'BJB', this)">
+                <input type="radio" name="pay-method" id="pay-bjb" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-16 h-9 rounded-md bg-[#005596] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/Bank_BJB_logo.svg" alt="Bank BJB" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-blue-600 text-xs\'>BJB</span>';" />
+                  </div>
+                  <p class="font-semibold text-sm text-ink">Bank BJB</p>
+                </div>
+              </div>
+              <!-- CIMB -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'CIMB', this)">
+                <input type="radio" name="pay-method" id="pay-cimb" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-16 h-9 rounded-md bg-[#78111A] flex items-center justify-center shrink-0 shadow-xs">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/38/CIMB_Niaga_logo.svg" alt="CIMB Niaga" class="h-4 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-red-700 text-xs\'>CIMB</span>';" />
+                  </div>
+                  <p class="font-semibold text-sm text-ink">CIMB Niaga</p>
+                </div>
+              </div>
+              <!-- Sampoerna -->
+              <div class="pay-option flex items-center gap-4 p-4" onclick="selectPayOption('Transfer Bank', 'SAHABAT_SAMPOERNA', this)">
+                <input type="radio" name="pay-method" id="pay-sampoerna" class="accent-brown w-4 h-4 shrink-0" />
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="w-16 h-9 rounded-md bg-[#9E7B27] flex items-center justify-center shrink-0 shadow-xs px-0.5">
+                    <img src="https://upload.wikimedia.org/wikipedia/id/1/14/Bank_Sahabat_Sampoerna_logo.png?utm_source=id.wikipedia.org&utm_campaign=index&utm_content=thumbnail_unscaled&_=20240320131735" alt="Bank Sampoerna" class="h-5 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'font-bold text-yellow-700 text-[9px]\'>SAMPOERNA</span>';" />
+                  </div>
+                  <p class="font-semibold text-sm text-ink">Bank Sampoerna</p>
                 </div>
               </div>
             </div>
-            <!-- Instruksi Transfer Bank -->
-            <div id="bank-instruction" class="hidden mt-4 p-4 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800 space-y-1">
-              <p class="font-semibold">Instruksi Transfer ke <span id="bank-name">Bank</span>:</p>
-              <p>1. Buka aplikasi mobile banking atau ATM <span id="bank-name-2">Bank</span>.</p>
-              <p>2. Pilih menu "Transfer Antar Bank" atau "Transfer ke Rekening".</p>
-              <p>3. Masukkan nomor rekening di atas, lalu masukkan nominal sesuai total tagihan.</p>
-              <p>4. Kirim bukti transfer via WhatsApp ke <span class="font-bold">+62 895 2394 1316</span> untuk konfirmasi.</p>
-              <p class="font-semibold text-amber-700">* Pesanan akan diproses setelah pembayaran terkonfirmasi (max. 1x24 jam).</p>
+            <!-- Info Bank -->
+            <div id="bank-instruction" class="hidden mt-4 p-4 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800">
+              <p class="font-semibold">✓ <span id="bank-name">Bank</span> dipilih.</p>
+              <p class="mt-1">Klik "Buat Pesanan" — kamu langsung ke halaman Virtual Account <span id="bank-name-2">Bank</span> di Xendit.</p>
             </div>
           </div>
         </section>

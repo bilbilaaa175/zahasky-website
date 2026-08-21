@@ -174,55 +174,98 @@ app.get('/api/products/:id/image', async (req, res) => {
 });
 
 // =========================================================================
-// Endpoint 2: Proses Checkout (Buat Quotation di Odoo + Invoice di Xendit)
+// Endpoint 1: Processes Checkout (Odoo Quotation + Xendit Invoice Direct Bank)
 // =========================================================================
 app.post('/api/checkout', async (req, res) => {
     try {
-        const { orderId, amount, customerEmail, customerName, items, description } = req.body; 
+        const { orderId, amount, customerEmail, customerName, items, description, bankCode } = req.body; 
 
         const externalId = orderId || `ZHK-${Date.now()}`;
         const totalAmount = parseFloat(amount || 0);
 
-        // A. Buat Quotation (sale.order) di Odoo dengan client_order_ref = externalId (ZHK-...)
+        // A. Buat Quotation (sale.order) di Odoo
         try {
             const odooOrderId = await createSalesOrder(1, items, externalId);
-            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
+            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat dengan ID: #${odooOrderId}`);
         } catch (odooErr) {
-            console.warn(`⚠️ [Odoo] Gagal membuat Quotation di Odoo (abaikan jika offline/koneksi): ${odooErr.message}`);
+            console.warn(`⚠️ [Odoo] Gagal membuat Quotation: ${odooErr.message}`);
         }
 
-        // B. Buat Invoice via Xendit SDK (REST API /v2/invoices)
-        const xenditInvoice = await Invoice.createInvoice({
-            data: {
-                externalId: externalId,
-                amount: totalAmount,
-                payerEmail: customerEmail || 'customer@zahasky.com',
-                description: description || `Pembayaran Pesanan Zahasky (${externalId})`,
-                invoiceDuration: '86400', // 24 jam
-                successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
-                items: Array.isArray(items) ? items.map(item => ({
-                    name: item.name || 'Produk Zahasky',
-                    price: parseFloat(item.price || 0),
-                    quantity: parseInt(item.quantity || 1),
-                    category: item.page_type || 'Product'
-                })) : []
-            }
-        });
+        // B. Mapping filter payment_methods Xendit Invoice
+        let paymentMethodsFilter = undefined;
+        if (bankCode && bankCode !== 'QRIS') {
+            paymentMethodsFilter = [bankCode.toUpperCase()]; // Contoh: ['BNI'], ['BCA'], ['MANDIRI']
+        } else if (bankCode === 'QRIS') {
+            paymentMethodsFilter = ['QR_CODE'];
+        }
 
-        const invoiceUrl = xenditInvoice.invoiceUrl || xenditInvoice.invoice_url;
-        console.log(`✓ Invoice Xendit berhasil dibuat untuk ${externalId}: ${invoiceUrl}`);
+        // C. Buat Invoice di Xendit (v2)
+        const invoiceData = {
+            externalId: externalId,
+            amount: totalAmount,
+            payerEmail: customerEmail || 'customer@zahasky.com',
+            description: description || `Pembayaran Pesanan Zahasky (${externalId})`,
+            invoiceDuration: '86400', // 24 jam
+            successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
+            items: Array.isArray(items) ? items.map(item => ({
+                name: item.name || 'Produk Zahasky',
+                price: parseFloat(item.price || 0),
+                quantity: parseInt(item.quantity || 1),
+                category: item.page_type || 'Product'
+            })) : []
+        };
+
+        if (paymentMethodsFilter) {
+            invoiceData.paymentMethods = paymentMethodsFilter;
+        }
+
+        const Invoice = await Invoice.createInvoice({ data: invoiceData });
+        const invoiceUrl = Invoice.invoiceUrl || Invoice.invoice_url;
 
         res.json({
             success: true,
-            message: "Invoice Xendit & Quotation Odoo berhasil dibuat!",
             orderId: externalId,
             invoiceUrl: invoiceUrl
         });
 
     } catch (error) {
         console.error("Detail Error Invoice Xendit:", error);
-        res.status(500).json({ success: false, message: "Gagal membuat Invoice Xendit", error: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
+});
+
+// =========================================================================
+// Endpoint: E-Wallet Charge — DANA, OVO, GoPay, ShopeePay
+// =========================================================================
+app.post('/api/payment/ewallet', async (req, res) => {
+  try {
+    const { orderId, amount, ewalletType } = req.body;
+
+    // Gunakan 'Invoice' (bukan xenditInvoice)
+    const response = await Invoice.createInvoice({
+      data: {
+        externalId: orderId,
+        amount: Number(amount),
+        paymentMethods: [ewalletType.toUpperCase()], // Memastikan format uppercase (misal: 'DANA', 'SHOPEEPAY')
+        currency: 'IDR'
+      }
+    });
+
+    // Mengambil URL pengalihan invoice asli dari Xendit
+    const checkoutUrl = response.invoiceUrl || response.invoice_url;
+
+    return res.json({
+      success: true,
+      checkoutUrl: checkoutUrl
+    });
+
+  } catch (error) {
+    console.error('Xendit E-Wallet Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Gagal terhubung ke Xendit'
+    });
+  }
 });
 
 // =========================================================================
@@ -272,82 +315,40 @@ const handleXenditWebhook = async (req, res) => {
 app.post('/api/xendit/webhook', handleXenditWebhook);
 app.post('/api/webhook/xendit', handleXenditWebhook);
 
-// 1. ENDPOINT: Create Virtual Account (Transfer Bank)
-app.post('/api/payment/va', async (req, res) => {
-    try {
-        const { orderId, amount, bankCode, customerName, customerEmail } = req.body;
-        
-        // Panggil Xendit API Virtual Account
-        const response = await fetch('https://api.xendit.co/callback_virtual_accounts', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
-            },
-            body: JSON.stringify({
-                external_id: orderId,
-                bank_code: bankCode.toUpperCase(), // 'BCA', 'MANDIRI', 'BRI', 'BNI'
-                name: customerName || 'Customer Zahasky',
-                expected_amount: amount,
-                is_closed: true,
-                expiration_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 jam
-            })
-        });
-        const vaData = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(vaData.message || 'Gagal membuat Virtual Account');
-        }
-        res.json({
-            success: true,
-            orderId: orderId,
-            bank: vaData.bank_code,
-            vaNumber: vaData.account_number,
-            amount: vaData.expected_amount,
-            expirationDate: vaData.expiration_date,
-            status: 'PENDING'
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-// 2. ENDPOINT: Create E-Wallet Charge
+// =========================================================================
+// Endpoint: E-Wallet Charge — DANA, OVO, GoPay, ShopeePay
+// =========================================================================
 app.post('/api/payment/ewallet', async (req, res) => {
-    try {
-        const { orderId, amount, ewalletType, phone } = req.body; // ewalletType: 'DANA', 'SHOPEEPAY', 'OVO', 'LINKAJA'
-        const response = await fetch('https://api.xendit.co/ewallets/charges', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
-            },
-            body: JSON.stringify({
-                reference_id: orderId,
-                currency: 'IDR',
-                amount: amount,
-                checkout_method: 'ONE_TIME_PAYMENT',
-                channel_code: `ID_${ewalletType.toUpperCase()}`,
-                channel_properties: {
-                    mobile_number: phone || '081234567890',
-                    success_redirect_url: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`
-                }
-            })
-        });
-        const ewalletData = await response.json();
-        
-        // Ambil URL Redirect Checkout
-        const actions = ewalletData.actions || {};
-        const checkoutUrl = actions.desktop_web_checkout_url || actions.mobile_web_checkout_url || actions.qr_checkout_string;
-        res.json({
-            success: true,
-            orderId: orderId,
-            checkoutUrl: checkoutUrl,
-            status: 'PENDING'
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+  try {
+    const { orderId, amount, ewalletType } = req.body;
+
+    // Gunakan 'Invoice' (bukan xenditInvoice)
+    const response = await Invoice.createInvoice({
+      data: {
+        externalId: orderId,
+        amount: Number(amount),
+        paymentMethods: [ewalletType.toUpperCase()], // Memastikan format uppercase (misal: 'DANA', 'SHOPEEPAY')
+        currency: 'IDR'
+      }
+    });
+
+    // Mengambil URL pengalihan invoice asli dari Xendit
+    const checkoutUrl = response.invoiceUrl || response.invoice_url;
+
+    return res.json({
+      success: true,
+      checkoutUrl: checkoutUrl
+    });
+
+  } catch (error) {
+    console.error('Xendit E-Wallet Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Gagal terhubung ke Xendit'
+    });
+  }
 });
+
 // 3. ENDPOINT: Polling Cek Status Pembayaran (Untuk QRIS & VA)
 app.get('/api/payment/status/:orderId', async (req, res) => {
     try {
