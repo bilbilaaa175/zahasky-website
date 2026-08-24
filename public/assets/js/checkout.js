@@ -94,10 +94,17 @@ function showEmptyState() {
 function showCheckoutContent() {
   const empty   = document.getElementById('checkout-empty');
   const content = document.getElementById('checkout-content');
+  const mobile  = document.getElementById('checkout-content-mobile');
   const bar     = document.getElementById('mobile-bottom-bar');
   if (empty)   { empty.classList.add('hidden'); empty.classList.remove('flex'); }
   if (content) content.classList.remove('hidden');
-  if (bar)     bar.classList.remove('hidden');
+
+  // Mobile: clone ke single-col view
+  if (mobile) {
+    mobile.classList.remove('hidden');
+    mobile.innerHTML = content.innerHTML;
+  }
+  if (bar) bar.classList.remove('hidden');
 }
 
 // ════════════════════════════════════════════════════════
@@ -538,162 +545,113 @@ async function placeOrder() {
     subtotal,
     shipping_cost: shipping,
     total,
-    status: 'PENDING',
+    status: 'PENDING', // AWAL STATUS SELALU PENDING
     has_physical: hasPhysicalItem,
     has_digital: hasDigitalItem,
   };
 
+  // Simpan pesanan ke LocalStorage dengan status PENDING
   saveOrderToHistory(orderData);
   removeCheckedOutItemsFromCart();
 
+  // =========================================================================
+  // ALUR PEMBAYARAN: COD vs E-WALLET vs TRANSFER BANK vs QRIS
+  // =========================================================================
   if (selectedPayMethod.type === 'COD') {
     showSuccessModal(orderData);
     return;
   }
 
-  let customerEmail = 'customer@zahasky.com';
-  const dbClient = window.supabaseClient || window.supabase;
-  if (dbClient && dbClient.auth) {
-    try {
-      const { data: { session } } = await dbClient.auth.getSession();
-      if (session?.user?.email) customerEmail = session.user.email;
-    } catch (e) {}
-  }
+  try {
+    let customerEmail = 'customer@zahasky.com';
+    const dbClient = window.supabaseClient || window.supabase;
+    if (dbClient && dbClient.auth) {
+      try {
+        const { data: { session } } = await dbClient.auth.getSession();
+        if (session?.user?.email) customerEmail = session.user.email;
+      } catch (e) {}
+    }
 
- // ── 1. E-WALLET (DANA / OVO / GOPAY / SHOPEEPAY) ──────────────────────────
-  if (selectedPayMethod.type === 'E-Wallet') {
-    const ewalletCode = selectedPayMethod.sub; // DANA, OVO, GOPAY, SHOPEEPAY
-    
-    // Tampilkan pesan konfirmasi / notifikasi pengalihan
-    alert(`Pesanan #${orderId} berhasil dibuat!\n\nKamu akan dialihkan ke halaman pembayaran ${ewalletCode}. Silakan selesaikan pembayaran.`);
+    // ── E-WALLET: Redirect ke aplikasi e-wallet ──────────────────────────
+    if (selectedPayMethod.type === 'E-Wallet') {
+      // Mapping nama sub ke channel code Xendit
+      const ewalletMap = {
+        'DANA':      'DANA',
+        'OVO':       'OVO',
+        'GoPay':     'GOPAY',
+        'ShopeePay': 'SHOPEEPAY'
+      };
+      const ewalletType = ewalletMap[selectedPayMethod.sub] || selectedPayMethod.sub.toUpperCase();
 
-    try {
       const res = await fetch('/api/payment/ewallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId:     orderId,
-          amount:      total,
-          ewalletType: ewalletCode,
-          phone:       savedAddress?.phone || '081234567890'
+          orderId:       orderId,
+          amount:        total,
+          ewalletType:   ewalletType,
+          items:         checkoutItems,
+          customerEmail: customerEmail,
+          phone:         '081234567890'
         })
       });
 
       const result = await res.json();
-      
-      if (res.ok && result.success && result.checkoutUrl) {
-        // Alihkan pengguna ke URL E-Wallet resmi dari backend
+      if (result.success && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
       } else {
-        // Jika backend error (500), tampilkan notifikasi pesan error asli dari backend
-        alert('Gagal memproses E-Wallet: ' + (result.message || 'Terjadi kesalahan pada server backend.'));
+        alert('Gagal membuat transaksi E-Wallet: ' + (result.message || 'URL tidak tersedia'));
       }
-    } catch (err) {
-      console.error('E-Wallet Fetch Error:', err);
-      alert('Gagal terhubung ke server backend.');
+      return;
     }
-    return;
-  }
 
-  // ── 2. TRANSFER BANK (BCA, BNI, BRI, MANDIRI, PERMATA, BSI, BJB, CIMB, SAMPOERNA) ──
-  if (selectedPayMethod.type === 'Transfer Bank') {
-    const bankCode = selectedPayMethod.sub; // BCA, BNI, MANDIRI, BRI, dll
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId:       orderId,
-          amount:        total,
-          customerEmail: customerEmail,
-          customerName:  savedAddress?.name || 'Customer Zahasky',
-          items:         checkoutItems,
-          description:   `Pembayaran Pesanan Zahasky (#${orderId})`,
-          bankCode:      bankCode
-        })
-      });
+    // ── TRANSFER BANK: Xendit Invoice difilter ke bank yang dipilih ───────
+    // Mapping nama bank ke kode Xendit
+    const bankCodeMap = {
+      'Bank BCA':      'BCA',
+      'Bank Mandiri':  'MANDIRI',
+      'Bank BNI':      'BNI',
+      'Bank BRI':      'BRI',
+      'Bank Permata':  'PERMATA',
+      'Bank BSI':      'BSI',
+      'Bank BJB':      'BJB',
+      'Bank CIMB':     'CIMB',
+      'Bank Sampoerna': 'SAHABAT_SAMPOERNA'
+    };
+    const bankCode = selectedPayMethod.type === 'Transfer Bank'
+      ? (bankCodeMap[selectedPayMethod.sub] || selectedPayMethod.sub.toUpperCase())
+      : null;
 
-      const result = await res.json();
-      if (result.success && result.invoiceUrl) {
-        window.location.href = result.invoiceUrl; // Direct ke Halaman VA Bank
-      } else {
-        alert('Gagal membuat Invoice Bank: ' + (result.message || 'URL tidak tersedia'));
-      }
-    } catch (err) {
-      alert('Kesalahan koneksi Bank API.');
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId:       orderId,
+        amount:        total,
+        customerEmail: customerEmail,
+        customerName:  savedAddress?.name || 'Customer Zahasky',
+        items:         checkoutItems,
+        description:   `Pembayaran Pesanan Zahasky (#${orderId})`,
+        bankCode:      bankCode  // null jika QRIS
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      alert('Gagal membuat transaksi Xendit: ' + (errData.message || 'Server error. Pastikan node app.js sudah running!'));
+      return;
     }
-    return;
-  }
 
-  // ── TRANSFER BANK: Semua Bank via Xendit Invoice (filter ke 1 bank) ────────
-  // Gunakan Xendit Invoice API dengan payment_methods = ['BNI'] / ['BCA'] dll
-  // Xendit akan pre-filter halaman invoice hanya menampilkan bank yang dipilih
-  if (selectedPayMethod.type === 'Transfer Bank') {
-    const bankCode = selectedPayMethod.sub; // 'BCA', 'BNI', 'MANDIRI', dll
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId:       orderId,
-          amount:        total,
-          customerEmail: customerEmail,
-          customerName:  savedAddress?.name || 'Customer Zahasky',
-          items:         checkoutItems,
-          description:   `Pembayaran Pesanan Zahasky (#${orderId})`,
-          bankCode:      bankCode  // kirim bank code ke backend
-        })
-      });
+    const result = await res.json();
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        alert('Gagal membuat transaksi: ' + (errData.message || 'Server error. Pastikan node app.js running!'));
-        return;
-      }
-
-      const result = await res.json();
-
-      if (result.success && result.invoiceUrl) {
-        window.location.href = result.invoiceUrl;
-      } else {
-        alert('Gagal mendapatkan Link Pembayaran Xendit: ' + (result.message || 'URL tidak tersedia'));
-      }
-    } catch (err) {
-      console.error('Bank Transfer Error:', err);
-      alert('Terjadi kesalahan koneksi saat memproses pembayaran.');
+    if (result.success && result.invoiceUrl) {
+      window.location.href = result.invoiceUrl;
+    } else {
+      alert('Gagal mendapatkan Link Pembayaran Xendit: ' + (result.message || 'URL tidak tersedia'));
     }
-    return;
-  }
-
-  // ── QRIS ──────────────────────────────────────────────────────────────────
-  if (selectedPayMethod.type === 'QRIS') {
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId:       orderId,
-          amount:        total,
-          customerEmail: customerEmail,
-          customerName:  savedAddress?.name || 'Customer Zahasky',
-          items:         checkoutItems,
-          description:   `Pembayaran Pesanan Zahasky (#${orderId})`,
-          bankCode:      'QRIS'
-        })
-      });
-
-      const result = await res.json();
-
-      if (result.success && result.invoiceUrl) {
-        window.location.href = result.invoiceUrl;
-      } else {
-        alert('Gagal mendapatkan Link Pembayaran Xendit: ' + (result.message || 'URL tidak tersedia'));
-      }
-    } catch (err) {
-      console.error('QRIS Error:', err);
-      alert('Terjadi kesalahan koneksi saat memproses pembayaran.');
-    }
-    return;
+  } catch (err) {
+    console.error('Checkout Error:', err);
+    alert('Terjadi kesalahan koneksi saat memproses pembayaran Xendit.');
   }
 }
 

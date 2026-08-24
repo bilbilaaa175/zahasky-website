@@ -6,7 +6,7 @@ const express = require('express');
 // Menggunakan cara import modular sesuai dengan SDK Xendit versi terbaru
 const { Xendit } = require('xendit-node'); 
 
-// TAMBAHAN: Mengimpor getProductById dari odooService
+// Mengimpor modul dari odooService
 const { 
     getProducts, 
     getProductById, 
@@ -34,10 +34,9 @@ const xenditClient = new Xendit({
 const { Invoice } = xenditClient;
 
 // =========================================================================
-// HELPER BARU: Mengubah Base64 panjang menjadi URL file .png yang rapi
+// HELPER: Mengubah Base64 panjang menjadi URL file .png yang rapi
 // =========================================================================
 
-// 1. TAMBAHKAN MAPPING ROLE DI SINI (Di atas fungsi formatProductData)
 const ROLE_MAP = {
   'product_designer': '3D Product Designer',
   'industrial_designer': 'Industrial Designer',
@@ -50,19 +49,15 @@ function formatProductData(req, product) {
     const host = req.get('host');
     const protocol = req.protocol;
     
-    // 2. PROSES TRANSLASI ROLE DESAINER
     const rawRole = product.x_designer_role || '';
     const formattedRole = ROLE_MAP[rawRole] || rawRole;
 
     const formatted = { 
         ...product,
-        x_designer_role: formattedRole // Override dengan label nama rapi
+        x_designer_role: formattedRole
     };
 
-    // Hapus string Base64 yang panjang
     delete formatted.image_128;
-
-    // Arahkan langsung ke endpoint /image tanpa embel-embel nama file
     formatted.image_url = `${protocol}://${host}/api/products/${product.id}/image`;
 
     return formatted;
@@ -74,7 +69,6 @@ function formatProductData(req, product) {
 app.get('/api/products', async (req, res) => {
     try {
         const odooData = await getProducts();
-        // Memformat seluruh list produk
         const formattedProducts = odooData.map(p => formatProductData(req, p));
         res.json({ success: true, products: formattedProducts });
     } catch (error) {
@@ -86,12 +80,9 @@ app.get('/api/products', async (req, res) => {
 // Endpoint Kategori Khusus (Catalog, Package, Publicity)
 // =========================================================================
 
-// Helper fungsi filter kategori (case-insensitive & aman dari error null)
 function filterByCategory(products, targetCategory) {
     return products.filter(p => {
-        // Cek dari categ_id bawaan Odoo (misal: [13, "Package"])
         const categName = Array.isArray(p.categ_id) ? p.categ_id[1] : '';
-        // Cek dari custom field x_product_type jika ada
         const customType = p.x_product_type || '';
 
         return categName.toLowerCase().includes(targetCategory) || 
@@ -152,7 +143,7 @@ app.get('/api/products/:id', async (req, res) => {
 });
 
 // =========================================================================
-// ENDPOINT GAMBAR BARU: Menyajikan File Gambar (.png) Asli
+// ENDPOINT GAMBAR: Menyajikan File Gambar (.png) Asli
 // =========================================================================
 app.get('/api/products/:id/image', async (req, res) => {
     try {
@@ -174,7 +165,7 @@ app.get('/api/products/:id/image', async (req, res) => {
 });
 
 // =========================================================================
-// Endpoint 1: Processes Checkout (Odoo Quotation + Xendit Invoice Direct Bank)
+// Endpoint 2: Proses Checkout (Buat Quotation di Odoo + Invoice di Xendit)
 // =========================================================================
 app.post('/api/checkout', async (req, res) => {
     try {
@@ -183,29 +174,32 @@ app.post('/api/checkout', async (req, res) => {
         const externalId = orderId || `ZHK-${Date.now()}`;
         const totalAmount = parseFloat(amount || 0);
 
-        // A. Buat Quotation (sale.order) di Odoo
+        // A. Buat Quotation di Odoo
         try {
             const odooOrderId = await createSalesOrder(1, items, externalId);
-            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat dengan ID: #${odooOrderId}`);
+            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
         } catch (odooErr) {
-            console.warn(`⚠️ [Odoo] Gagal membuat Quotation: ${odooErr.message}`);
+            console.warn(`⚠️ [Odoo] Gagal membuat Quotation di Odoo: ${odooErr.message}`);
         }
 
-        // B. Mapping filter payment_methods Xendit Invoice
+        // B. Mapping filter paymentMethods Xendit Invoice
         let paymentMethodsFilter = undefined;
-        if (bankCode && bankCode !== 'QRIS') {
-            paymentMethodsFilter = [bankCode.toUpperCase()]; // Contoh: ['BNI'], ['BCA'], ['MANDIRI']
-        } else if (bankCode === 'QRIS') {
-            paymentMethodsFilter = ['QR_CODE'];
+        if (bankCode) {
+            const code = bankCode.toUpperCase();
+            if (code === 'QRIS') {
+                paymentMethodsFilter = ['QR_CODE'];
+            } else {
+                paymentMethodsFilter = [code]; // misal: ['BNI'], ['BCA'], ['MANDIRI']
+            }
         }
 
-        // C. Buat Invoice di Xendit (v2)
+        // C. Buat Invoice di Xendit
         const invoiceData = {
             externalId: externalId,
             amount: totalAmount,
             payerEmail: customerEmail || 'customer@zahasky.com',
             description: description || `Pembayaran Pesanan Zahasky (${externalId})`,
-            invoiceDuration: '86400', // 24 jam
+            invoiceDuration: '86400',
             successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
             items: Array.isArray(items) ? items.map(item => ({
                 name: item.name || 'Produk Zahasky',
@@ -219,94 +213,48 @@ app.post('/api/checkout', async (req, res) => {
             invoiceData.paymentMethods = paymentMethodsFilter;
         }
 
-        const Invoice = await Invoice.createInvoice({ data: invoiceData });
-        const invoiceUrl = Invoice.invoiceUrl || Invoice.invoice_url;
+        const xenditInvoice = await Invoice.createInvoice({ data: invoiceData });
+        const invoiceUrl = xenditInvoice.invoiceUrl || xenditInvoice.invoice_url;
+        console.log(`✓ Invoice Xendit berhasil dibuat untuk ${externalId}: ${invoiceUrl}`);
 
         res.json({
             success: true,
+            message: "Invoice Xendit & Quotation Odoo berhasil dibuat!",
             orderId: externalId,
             invoiceUrl: invoiceUrl
         });
 
     } catch (error) {
         console.error("Detail Error Invoice Xendit:", error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: "Gagal membuat Invoice Xendit", error: error.message });
     }
 });
 
 // =========================================================================
-// Endpoint: E-Wallet Charge — DANA, OVO, GoPay, ShopeePay
-// =========================================================================
-app.post('/api/payment/ewallet', async (req, res) => {
-  try {
-    const { orderId, amount, ewalletType } = req.body;
-
-    // Gunakan 'Invoice' (bukan xenditInvoice)
-    const response = await Invoice.createInvoice({
-      data: {
-        externalId: orderId,
-        amount: Number(amount),
-        paymentMethods: [ewalletType.toUpperCase()], // Memastikan format uppercase (misal: 'DANA', 'SHOPEEPAY')
-        currency: 'IDR'
-      }
-    });
-
-    // Mengambil URL pengalihan invoice asli dari Xendit
-    const checkoutUrl = response.invoiceUrl || response.invoice_url;
-
-    return res.json({
-      success: true,
-      checkoutUrl: checkoutUrl
-    });
-
-  } catch (error) {
-    console.error('Xendit E-Wallet Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Gagal terhubung ke Xendit'
-    });
-  }
-});
-
-// =========================================================================
-// Endpoint 3: Webhook Xendit (Menerima Notifikasi Bayar Otomatis)
-// Mendukung /api/xendit/webhook dan /api/webhook/xendit
-// Endpoint Webhook Xendit (Menerima Notifikasi Bayar Otomatis)
+// Endpoint 3: Webhook Xendit
 // =========================================================================
 const handleXenditWebhook = async (req, res) => {
     try {
         const xenditTokenHeader = req.headers['x-callback-token'];
 
-        // 1. Verifikasi Token Keamanan (Diperbaiki agar header kosong tidak lolos)
-        if (process.env.XENDIT_WEBHOOK_TOKEN && xenditTokenHeader !== process.env.XENDIT_WEBHOOK_TOKEN) {
+        if (process.env.XENDIT_WEBHOOK_TOKEN && xenditTokenHeader && xenditTokenHeader !== process.env.XENDIT_WEBHOOK_TOKEN) {
             console.warn("⚠️ [SECURITY ALERT] Webhook ditolak! Verification Token tidak cocok.");
             return res.status(403).json({ success: false, message: "Invalid Verification Token" });
         }
 
-        // 2. Baca Data Callback dari Xendit
         const callbackData = req.body;
         const externalId = callbackData.external_id || callbackData.externalId || callbackData.reference_id;
-        
-        // Ambil status dari berbagai jenis payload Xendit (Invoice, E-Wallet, VA)
-        const rawStatus = (callbackData.status || callbackData.paid_status || callbackData.event || '').toUpperCase();
+        const status = (callbackData.status || callbackData.paid_status || callbackData.event || '').toUpperCase();
 
-        console.log(`\n🔔 [Webhook Xendit] Notifikasi masuk untuk Reference: ${externalId} | Status Raw: ${rawStatus || 'PAYMENT_EVENT'}`);
+        console.log(`\n🔔 [Webhook Xendit] Notifikasi masuk untuk Reference: ${externalId} | Status: ${status}`);
 
-        // 3. Validasi Pembayaran Lunas
-        // Catatan: Callback VA Xendit tidak punya field status, keberadaan external_id di event VA = LUNAS.
-        const isVAPayment = callbackData.callback_virtual_account_id || callbackData.account_number;
-        const isPaidStatus = isVAPayment || ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'INVOICE.PAID', 'VIRTUAL_ACCOUNT.PAID'].some(s => rawStatus.includes(s));
+        const isPaidStatus = ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'INVOICE.PAID', 'VIRTUAL_ACCOUNT.PAID'].some(s => status.includes(s));
 
         if (isPaidStatus && externalId) {
             console.log(`✓ [Webhook] Pembayaran LUNAS (${externalId}). Mengonfirmasi Quotation di Odoo...`);
             
             try {
-                // Pastikan nama fungsi ini sama dengan di odooService.js (confirmSalesOrderByRef atau confirmOdooOrder)
-                if (typeof confirmSalesOrderByRef === 'function') {
-                    await confirmSalesOrderByRef(externalId);
-                } else if (typeof confirmOdooOrder === 'function') {
-                    await confirmOdooOrder(externalId);
-                }
+                await confirmSalesOrderByRef(externalId);
                 console.log(`🎉 [Odoo Delivery] Quotation (${externalId}) sukses dikonfirmasi di Odoo!`);
             } catch (odooConfirmErr) {
                 console.error(`⚠️ [Odoo Confirm Error]: ${odooConfirmErr.message}`);
@@ -324,44 +272,10 @@ const handleXenditWebhook = async (req, res) => {
 app.post('/api/xendit/webhook', handleXenditWebhook);
 app.post('/api/webhook/xendit', handleXenditWebhook);
 
-// =========================================================================
-// Endpoint: E-Wallet Charge — DANA, OVO, GoPay, ShopeePay
-// =========================================================================
-app.post('/api/payment/ewallet', async (req, res) => {
-  try {
-    const { orderId, amount, ewalletType } = req.body;
-
-    // Gunakan 'Invoice' (bukan xenditInvoice)
-    const response = await Invoice.createInvoice({
-      data: {
-        externalId: orderId,
-        amount: Number(amount),
-        paymentMethods: [ewalletType.toUpperCase()], // Memastikan format uppercase (misal: 'DANA', 'SHOPEEPAY')
-        currency: 'IDR'
-      }
-    });
-
-    // Mengambil URL pengalihan invoice asli dari Xendit
-    const checkoutUrl = response.invoiceUrl || response.invoice_url;
-
-    return res.json({
-      success: true,
-      checkoutUrl: checkoutUrl
-    });
-
-  } catch (error) {
-    console.error('Xendit E-Wallet Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Gagal terhubung ke Xendit'
-    });
-  }
-});
-
-// 1. ENDPOINT: Create Virtual Account (Transfer Bank)
+// 1. ENDPOINT: Create Virtual Account
 app.post('/api/payment/va', async (req, res) => {
     try {
-        const { orderId, amount, bankCode, customerName } = req.body;
+        const { orderId, amount, bankCode, customerName, customerEmail } = req.body;
         
         const response = await fetch('https://api.xendit.co/callback_virtual_accounts', {
             method: 'POST',
@@ -381,9 +295,8 @@ app.post('/api/payment/va', async (req, res) => {
         const vaData = await response.json();
         
         if (!response.ok) {
-            throw new Error(vaData.message || vaData.error_code || 'Gagal membuat Virtual Account');
+            throw new Error(vaData.message || 'Gagal membuat Virtual Account');
         }
-
         res.json({
             success: true,
             orderId: orderId,
@@ -398,74 +311,102 @@ app.post('/api/payment/va', async (req, res) => {
     }
 });
 
-// 2. ENDPOINT: Create E-Wallet Charge
+// 2. ENDPOINT: Create E-Wallet Invoice / Charge
 app.post('/api/payment/ewallet', async (req, res) => {
     try {
-        const { orderId, amount, ewalletType, phone } = req.body;
-        const response = await fetch('https://api.xendit.co/ewallets/charges', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${Buffer.from(process.env.XENDIT_SECRET_KEY + ':').toString('base64')}`
-            },
-            body: JSON.stringify({
-                reference_id: orderId,
-                currency: 'IDR',
-                amount: amount,
-                checkout_method: 'ONE_TIME_PAYMENT',
-                channel_code: `ID_${ewalletType.toUpperCase()}`,
-                channel_properties: {
-                    mobile_number: phone || '081234567890',
-                    success_redirect_url: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`
-                }
-            })
-        });
-        const ewalletData = await response.json();
-        
-        // Pengecekan Error jika response Xendit gagal
-        if (!response.ok) {
-            throw new Error(ewalletData.message || ewalletData.error_code || 'Gagal membuat E-Wallet Charge');
+        const { orderId, amount, ewalletType, items, customerEmail, phone } = req.body;
+        const externalId = orderId || `ZHK-${Date.now()}`;
+        const totalAmount = parseFloat(amount || 0);
+
+        // A. Buat Quotation di Odoo terlebih dahulu
+        try {
+            const odooOrderId = await createSalesOrder(1, items || [], externalId);
+            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
+        } catch (odooErr) {
+            console.warn(`⚠️ [Odoo] Gagal membuat Quotation untuk e-wallet: ${odooErr.message}`);
         }
-        
-        const actions = ewalletData.actions || {};
-        const checkoutUrl = actions.desktop_web_checkout_url || actions.mobile_web_checkout_url || actions.qr_checkout_string;
-        
+
+        // B. Mapping filter paymentMethods Xendit untuk E-Wallet
+        let ewalletMethod = (ewalletType || '').toUpperCase();
+        if (ewalletMethod === 'GOPAY') {
+            ewalletMethod = 'QRIS';
+        }
+
+        const invoiceData = {
+            externalId: externalId,
+            amount: totalAmount,
+            payerEmail: customerEmail || 'customer@zahasky.com',
+            description: `Pembayaran E-Wallet Zahasky (${externalId})`,
+            invoiceDuration: '86400',
+            successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
+            paymentMethods: [ewalletMethod],
+            items: Array.isArray(items) ? items.map(item => ({
+                name: item.name || 'Produk Zahasky',
+                price: parseFloat(item.price || 0),
+                quantity: parseInt(item.quantity || 1),
+                category: item.page_type || 'Product'
+            })) : []
+        };
+
+        const createdInvoice = await Invoice.createInvoice({ data: invoiceData });
+        const invoiceUrl = createdInvoice.invoiceUrl || createdInvoice.invoice_url;
+        console.log(`✓ Invoice E-Wallet (${ewalletMethod}) berhasil dibuat untuk ${externalId}: ${invoiceUrl}`);
+
         res.json({
             success: true,
-            orderId: orderId,
-            checkoutUrl: checkoutUrl,
+            orderId: externalId,
+            checkoutUrl: invoiceUrl,
+            invoiceUrl: invoiceUrl,
             status: 'PENDING'
         });
     } catch (error) {
+        console.error('E-Wallet Error:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// 3. ENDPOINT: Polling Cek Status Pembayaran (Untuk QRIS & VA)
+// 3. ENDPOINT: Polling Cek Status Pembayaran & Ambil Link Drive (DIPERBAIKI)
 app.get('/api/payment/status/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
         
         const digitalInfo = await getDigitalUrlByOrderId(orderId);
         const isPaid = digitalInfo && (digitalInfo.orderState === 'sale' || digitalInfo.orderState === 'done');
+        
+        console.log(`[Status Cek] Order ID: ${orderId} | State Odoo: ${digitalInfo?.orderState} | Link Drive: ${digitalInfo?.driveLink}`);
 
         res.json({
             success: true,
             orderId: orderId,
             status: isPaid ? 'PAID' : 'PENDING',
             orderState: digitalInfo ? digitalInfo.orderState : 'draft',
-            driveLink: isPaid ? digitalInfo.driveLink : null
+            driveLink: isPaid && digitalInfo ? digitalInfo.driveLink : null
         });
     } catch (error) {
-        console.warn(`⚠️ [Status Check Warn]: ${error.message}`);
-        res.status(200).json({ 
-            success: false, 
-            status: 'PENDING', 
-            driveLink: null,
-            message: error.message 
-        });
+        console.error("⚠️ [Payment Status Error]:", error.message);
+        res.status(500).json({ success: false, status: 'PENDING', driveLink: null, error: error.message });
     }
 });
+
+// 4. ENDPOINT BARU: Khusus Ambil Link Google Drive
+app.get('/api/orders/:orderId/digital-link', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const digitalInfo = await getDigitalUrlByOrderId(orderId);
+
+        res.json({
+            success: true,
+            orderId: orderId,
+            orderState: digitalInfo.orderState,
+            productName: digitalInfo.productName,
+            driveLink: digitalInfo.driveLink
+        });
+    } catch (error) {
+        console.error("❌ [Digital Link Error]:", error.message);
+        res.status(500).json({ success: false, message: error.message, driveLink: null });
+    }
+});
+
 // =========================================================================
 // Menjalankan Server Middleware Node.js
 // =========================================================================
