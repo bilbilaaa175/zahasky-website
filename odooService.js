@@ -1,6 +1,6 @@
 const xmlrpc = require('xmlrpc');
 
-// Konfigurasi Akun Odoo yang sudah terbukti sukses di Postman tadi
+// Konfigurasi Akun Odoo
 const config = {
     url: process.env.ODOO_URL,
     db: process.env.ODOO_DB, 
@@ -8,11 +8,10 @@ const config = {
     password: process.env.ODOO_PASSWORD
 };
 
-// Menghubungkan client Node.js ke alamat API Odoo
 const commonClient = xmlrpc.createClient({ url: `${config.url}/xmlrpc/2/common` });
 const objectClient = xmlrpc.createClient({ url: `${config.url}/xmlrpc/2/object` });
 
-// 1. Fungsi internal untuk login (mendapatkan User ID secara otomatis)
+// 1. Fungsi internal untuk login
 function getUserId() {
     return new Promise((resolve, reject) => {
         commonClient.methodCall('authenticate', [config.db, config.username, config.password, {}], (err, uid) => {
@@ -23,35 +22,21 @@ function getUserId() {
     });
 }
 
-// 2. Fungsi utama untuk mengambil daftar produk beserta Custom Field dari Odoo
+// 2. Mengambil daftar produk
 async function getProducts() {
     try {
         const uid = await getUserId();
-        console.log(`✓ Berhasil terkoneksi ke Odoo. Menggunakan User ID: ${uid}`);
-
         return new Promise((resolve, reject) => {
             objectClient.methodCall('execute_kw', [
-                config.db,
-                uid,
-                config.password,
-                'product.template',
-                'search_read',
+                config.db, uid, config.password,
+                'product.template', 'search_read',
                 [[]],
                 { 
-                    // TAMBAHAN: Masukkan semua field kustom yang baru kamu buat di Odoo
                     fields: [
-                        'name', 
-                        'list_price', 
-                        'categ_id',
-                        'image_128',
-                        'x_product_description',
-                        'x_digital_file_url', 
-                        'x_product_type', 
-                        'x_series', 
-                        'x_designer_name', 
-                        'x_designer_role', 
-                        'x_file_format', 
-                        'x_file_size'
+                        'name', 'list_price', 'categ_id', 'image_128',
+                        'x_product_description', 'x_digital_file_url', 
+                        'x_product_type', 'x_series', 'x_designer_name', 
+                        'x_designer_role', 'x_file_format', 'x_file_size'
                     ], 
                     limit: 100 
                 }
@@ -65,32 +50,20 @@ async function getProducts() {
     }
 }
 
-// 3. FUNGSI BARU: Mengambil Detail 1 Produk berdasarkan Product ID
+// 3. Mengambil Detail 1 Produk
 async function getProductById(productId) {
     const uid = await getUserId();
-
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db,
-            uid,
-            config.password,
-            'product.template',
-            'search_read',
+            config.db, uid, config.password,
+            'product.template', 'search_read',
             [[['id', '=', parseInt(productId)]]],
             { 
                 fields: [
-                    'name', 
-                    'list_price', 
-                    'categ_id',
-                    'image_128',
-                    'x_product_description',
-                    'x_digital_file_url', 
-                    'x_product_type', 
-                    'x_series', 
-                    'x_designer_name', 
-                    'x_designer_role', 
-                    'x_file_format', 
-                    'x_file_size'
+                    'name', 'list_price', 'categ_id', 'image_128',
+                    'x_product_description', 'x_digital_file_url', 
+                    'x_product_type', 'x_series', 'x_designer_name', 
+                    'x_designer_role', 'x_file_format', 'x_file_size'
                 ] 
             }
         ], (err, products) => {
@@ -101,20 +74,17 @@ async function getProductById(productId) {
     });
 }
 
-// 4. Fungsi untuk membuat Sales Order (Quotation) baru di Odoo
+// 4. Membuat Sales Order (Quotation)
 async function createSalesOrder(partnerId, items, clientRef) {
     const uid = await getUserId();
-    
     return new Promise(async (resolve, reject) => {
         try {
-            // Biar fleksibel jika items berupa single item { productId, productName, price } atau array of items
             const itemList = Array.isArray(items) ? items : [items];
             const orderLines = [];
 
             for (const item of itemList) {
                 const pId = parseInt(item.id || item.productId || 1);
                 
-                // Cari product.product variant ID dari product_tmpl_id
                 const variantIds = await new Promise((res, rej) => {
                     objectClient.methodCall('execute_kw', [
                         config.db, uid, config.password,
@@ -133,7 +103,6 @@ async function createSalesOrder(partnerId, items, clientRef) {
                 }]);
             }
 
-            // Ambil default values sale.order
             objectClient.methodCall('execute_kw', [
                 config.db, uid, config.password,
                 'sale.order', 'default_get',
@@ -144,7 +113,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
                 const orderData = {
                     ...defaultValues,
                     'partner_id': partnerId || 1,
-                    'client_order_ref': clientRef || '', // SIMPAN REFERENCE ID (ZHK-...)
+                    'client_order_ref': clientRef || '',
                     'order_line': orderLines
                 };
 
@@ -164,30 +133,26 @@ async function createSalesOrder(partnerId, items, clientRef) {
     });
 }
 
-// 5. Fungsi Mengonfirmasi Quotation menjadi Sales Order Terbayar
+// 5. Mengonfirmasi Quotation via ID
 async function confirmSalesOrder(orderId) {
     const uid = await getUserId();
-
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db,
-            uid,
-            config.password,
-            'sale.order',
-            'action_confirm',
+            config.db, uid, config.password,
+            'sale.order', 'action_confirm',
             [[parseInt(orderId)]]
         ], (err, result) => {
             if (err) {
                 console.error(`✗ Gagal mengonfirmasi Order ID ${orderId} di Odoo:`, err);
                 return reject(err);
             }
-            console.log(`✓ [Odoo] Order ID ${orderId} berhasil otomatis dikonfirmasi menjadi Sales Order!`);
+            console.log(`✓ [Odoo] Order ID ${orderId} berhasil dikonfirmasi!`);
             resolve(result);
         });
     });
 }
 
-// 5b. Fungsi Mengonfirmasi Quotation di Odoo berdasarkan Reference ID (client_order_ref ZHK-...)
+// 5b. Mengonfirmasi Quotation via Reference ID
 async function confirmSalesOrderByRef(clientRef) {
     const uid = await getUserId();
     return new Promise((resolve, reject) => {
@@ -200,7 +165,6 @@ async function confirmSalesOrderByRef(clientRef) {
             
             let targetOrderId = (orderIds && orderIds.length > 0) ? orderIds[0] : null;
 
-            // Jika tidak ketemu via client_order_ref, coba cari via numeric ID jika clientRef berupa angka
             if (!targetOrderId && !isNaN(clientRef)) {
                 targetOrderId = parseInt(clientRef);
             }
@@ -220,17 +184,13 @@ async function confirmSalesOrderByRef(clientRef) {
     });
 }
 
-// 6. Fungsi Mengambil Link Google Drive Produk
+// 6. Mengambil Link Google Drive dari Product ID
 async function getDigitalFileUrl(productId) {
     const uid = await getUserId();
-
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db,
-            uid,
-            config.password,
-            'product.template',
-            'search_read',
+            config.db, uid, config.password,
+            'product.template', 'search_read',
             [[['id', '=', parseInt(productId)]]],
             { fields: ['name', 'x_digital_file_url'] }
         ], (err, products) => {
@@ -241,83 +201,37 @@ async function getDigitalFileUrl(productId) {
     });
 }
 
-// 7. Fungsi Ambil Link Google Drive Langsung dari Sales Order ID
+// 7. Mengambil Link Google Drive dari Sales Order ID / Client Reference (SUDAH DIPERBAIKI)
 async function getDigitalUrlByOrderId(orderId) {
     const uid = await getUserId();
-
     return new Promise((resolve, reject) => {
+        
+        // Pencarian fleksibel: Jika orderId berupa ID angka atau Reference String (ZHK-...)
+        let searchDomain = [[]];
+        if (!isNaN(orderId)) {
+            searchDomain = [[['id', '=', parseInt(orderId)]]];
+        } else {
+            searchDomain = [[['client_order_ref', '=', String(orderId)]]];
+        }
+
         objectClient.methodCall('execute_kw', [
             config.db, uid, config.password,
-            'sale.order', 'read',
-            [[parseInt(orderId)]],
-            { fields: ['order_line'] }
+            'sale.order', 'search_read',
+            searchDomain,
+            { fields: ['order_line', 'state'] }
         ], (err, orders) => {
-            if (err) return reject(err);
-            if (!orders || orders.length === 0 || orders[0].order_line.length === 0) {
-                return reject(new Error('Sales Order tidak ditemukan atau tidak memiliki produk'));
+            if (err || !orders || orders.length === 0) {
+                return reject(err || new Error('Order tidak ditemukan di Odoo'));
+            }
+
+            const orderState = orders[0].state; // 'draft', 'sale', 'done'
+            if (!orders[0].order_line || orders[0].order_line.length === 0) {
+                return resolve({ productId: null, productName: '', driveLink: null, orderState });
             }
 
             const lineId = orders[0].order_line[0];
 
-            objectClient.methodCall('execute_kw', [
-                config.db, uid, config.password,
-                'sale.order.line', 'read',
-                [[lineId]],
-                { fields: ['product_id'] }
-            ], (lineErr, lines) => {
-                if (lineErr) return reject(lineErr);
-                if (!lines || lines.length === 0) return reject(new Error('Order line tidak ditemukan'));
-
-                const variantId = lines[0].product_id[0];
-
-                objectClient.methodCall('execute_kw', [
-                    config.db, uid, config.password,
-                    'product.product', 'read',
-                    [[variantId]],
-                    { fields: ['product_tmpl_id'] }
-                ], (variantErr, variants) => {
-                    if (variantErr) return reject(variantErr);
-                    if (!variants || variants.length === 0) return reject(new Error('Varian produk tidak ditemukan'));
-
-                    const templateId = variants[0].product_tmpl_id[0];
-
-                    objectClient.methodCall('execute_kw', [
-                        config.db, uid, config.password,
-                        'product.template', 'read',
-                        [[templateId]],
-                        { fields: ['x_digital_file_url'] }
-                    ], (prodErr, templates) => {
-                        if (prodErr) return reject(prodErr);
-                        if (!templates || templates.length === 0) return reject(new Error('Template Produk tidak ditemukan'));
-
-                        resolve({
-                            productId: templateId,
-                            driveLink: templates[0].x_digital_file_url || null
-                        });
-                    });
-                });
-            });
-        });
-    });
-}
-
-/**
- * Mengambil Link Google Drive (x_digital_file_url) dari Odoo berdasarkan Sales Order ID
- */
-async function getDigitalUrlByOrderId(orderId) {
-    const uid = await getUserId();
-    return new Promise((resolve, reject) => {
-        // 1. Ambil Sale Order
-        objectClient.methodCall('execute_kw', [
-            config.db, uid, config.password,
-            'sale.order', 'read',
-            [[parseInt(orderId)]],
-            { fields: ['order_line', 'state'] }
-        ], (err, orders) => {
-            if (err || !orders || orders.length === 0) return reject(err || new Error('Order tidak ditemukan'));
-            const orderState = orders[0].state; // 'draft', 'sale', 'done'
-            const lineId = orders[0].order_line[0];
-            // 2. Ambil Product Variant dari Order Line
+            // Read Order Line
             objectClient.methodCall('execute_kw', [
                 config.db, uid, config.password,
                 'sale.order.line', 'read',
@@ -326,7 +240,8 @@ async function getDigitalUrlByOrderId(orderId) {
             ], (lineErr, lines) => {
                 if (lineErr || !lines || lines.length === 0) return reject(lineErr);
                 const variantId = lines[0].product_id[0];
-                // 3. Ambil Product Template ID
+
+                // Read Product Variant
                 objectClient.methodCall('execute_kw', [
                     config.db, uid, config.password,
                     'product.product', 'read',
@@ -335,12 +250,13 @@ async function getDigitalUrlByOrderId(orderId) {
                 ], (vErr, variants) => {
                     if (vErr || !variants) return reject(vErr);
                     const templateId = variants[0].product_tmpl_id[0];
-                    // 4. Ambil Custom Field x_digital_file_url dari product.template
+
+                    // Read Product Template untuk ambil Link Drive
                     objectClient.methodCall('execute_kw', [
                         config.db, uid, config.password,
                         'product.template', 'read',
                         [[templateId]],
-                        { fields: ['name', 'x_digital_file_url', 'x_product_type'] }
+                        { fields: ['name', 'x_digital_file_url'] }
                     ], (pErr, templates) => {
                         if (pErr || !templates) return reject(pErr);
                         resolve({
@@ -356,7 +272,6 @@ async function getDigitalUrlByOrderId(orderId) {
     });
 }
 
-// TAMBAHAN: Ekspor getProductById agar bisa dipanggil di app.js
 module.exports = { 
     getProducts, 
     getProductById, 

@@ -52,7 +52,6 @@ if (registerForm) {
     submitBtn.textContent = "Memproses...";
 
     try {
-      // Menggunakan origin browser secara dinamis agar sesuai dengan server lokal (Live Server)
       const redirectUrl = `${window.location.origin}/public/login.html`;
 
       const { data, error } = await dbClient.auth.signUp({
@@ -136,7 +135,6 @@ if (loginForm) {
 
       showMessage(messageBox, "success", "Login berhasil! Mengalihkan ke beranda...");
       setTimeout(() => { 
-        // Mengalihkan ke index.html setelah login
         window.location.href = "index.html"; 
       }, 1000);
 
@@ -155,12 +153,10 @@ if (loginForm) {
 // =========================================================================
 const profileForm = document.getElementById("profile-form");
 
-// Jalankan logika profil & logout setiap kali halaman profil dimuat
 document.addEventListener("DOMContentLoaded", async () => {
   const logoutBtn = document.getElementById("logout-btn");
   const dbClient = getDbClient();
 
-  // --- LOGOUT LOGIC (Dipasang di luar guard agar selalu aktif jika tombolnya ada) ---
   if (logoutBtn && dbClient) {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -169,14 +165,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (err) {
         console.error("Error signing out:", err);
       } finally {
-        // Hapus token lokal secara manual untuk memastikan bersih sempurna
         localStorage.clear();
         window.location.href = "index.html";
       }
     });
   }
 
-  // Jika tidak ada profile-form di halaman ini (bukan profile.html), berhentikan eksekusi
   if (!profileForm) return;
 
   const greetingEl = document.getElementById("user-greeting");
@@ -189,7 +183,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!dbClient || !dbClient.auth) return;
 
-  // --- A. PROTEKSI & CEK SESI LOGIN ---
   const { data: { session }, error: sessionError } = await dbClient.auth.getSession();
 
   if (sessionError || !session) {
@@ -200,23 +193,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const user = session.user;
   const metaData = user.user_metadata || {};
 
-  // Tampilkan Email langsung dari sesi
   if (emailInput) emailInput.value = user.email || "";
 
-  // --- B. LOAD DATA PROFIL (METADATA FIRST + DATABASE SYNC) ---
   async function loadUserProfile() {
-    // 1. Ambil data cadangan dari user_metadata saat registrasi
     const metaFullName = metaData.full_name || metaData.fullname || "";
     const metaWhatsapp = metaData.whatsapp || "";
 
-    // Set tampilan awal dari metadata dulu agar tidak terlambat/tampil "Pengguna"
     if (greetingEl && metaFullName) {
       greetingEl.textContent = `Halo, ${metaFullName}`;
     }
     if (fullNameInput && metaFullName) fullNameInput.value = metaFullName;
     if (whatsappInput && metaWhatsapp) whatsappInput.value = metaWhatsapp;
 
-    // 2. Ambil data terbaru dari Database Supabase (tabel profiles)
     try {
       const { data: dbProfile, error } = await dbClient
         .from("profiles")
@@ -232,7 +220,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (fullNameInput) fullNameInput.value = finalName;
         if (whatsappInput) whatsappInput.value = finalWa;
       } else if (!dbProfile && metaFullName) {
-        // Jika tabel profiles masih kosong, buatkan record barunya
         await dbClient.from("profiles").upsert({
           id: user.id,
           full_name: metaFullName,
@@ -247,7 +234,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await loadUserProfile();
 
-  // --- C. TAB NAVIGATION LOGIC ---
   const tabBtnInfo = document.getElementById("tab-btn-info");
   const tabBtnSecurity = document.getElementById("tab-btn-security");
   const tabBtnOrders = document.getElementById("tab-btn-orders");
@@ -277,12 +263,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderOrderHistory();
   });
 
-  // Auto-switch ke tab orders jika dari URL param
   const pageParams = new URLSearchParams(window.location.search);
   if (pageParams.get('tab') === 'orders') {
     switchTab(tabBtnOrders, tabContentOrders);
 
-    // Jika kembali dari Xendit dengan status=success, update order status menjadi CONFIRMED
     if (pageParams.get('status') === 'success') {
       try {
         let history = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
@@ -296,11 +280,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderOrderHistory();
   }
 
-  // Render order count badge
-  renderOrderHistory(true); // only update badge
+  renderOrderHistory(true);
 
-
-  // --- D. HANDLE UPDATE DATA PROFIL ---
   profileForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -335,7 +316,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // --- E. HANDLE UPDATE PASSWORD ---
   if (passwordForm) {
     passwordForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -368,13 +348,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 /**
  * @param {boolean} badgeOnly - Jika true, hanya update badge hitungan, tidak render kartu
  */
-function renderOrderHistory(badgeOnly = false) {
+async function renderOrderHistory(badgeOnly = false) {
   let orders = [];
   try {
     orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
   } catch { orders = []; }
 
-  // Update badge di tab button
   const badge = document.getElementById('orders-count-badge');
   if (badge) badge.textContent = `(${orders.length})`;
 
@@ -394,6 +373,42 @@ function renderOrderHistory(badgeOnly = false) {
   if (emptyState) emptyState.classList.add('hidden');
   listContainer.classList.remove('hidden');
 
+  // --- 1. SINKRONISASI ASYNC KE BACKEND TERLEBIH DAHULU ---
+  const syncPromises = orders.map((order, index) => {
+    const s = (order.status || '').toUpperCase();
+    if (['PENDING', 'PROCESSING', 'SALE', 'PAID', 'CONFIRMED'].includes(s) || !order.driveLink) {
+      return fetch(`/api/payment/status/${order.order_id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success) {
+            if (['PAID', 'SUCCEEDED', 'SETTLED', 'SALE', 'CONFIRMED'].includes((data.status || '').toUpperCase())) {
+              orders[index].status = 'PAID';
+            }
+
+            if (data.driveLink) {
+              orders[index].driveLink = data.driveLink;
+              if (orders[index].items) {
+                orders[index].items.forEach(item => {
+                  item.driveLink = data.driveLink;
+                  item.drive_link = data.driveLink;
+                  item.x_digital_file_url = data.driveLink;
+                });
+              }
+            }
+          }
+        })
+        .catch(err => console.warn('Error fetching order status:', err));
+    }
+    return Promise.resolve();
+  });
+
+  // Tunggu semua status & link Drive terbaru ditarik dari API
+  await Promise.all(syncPromises);
+
+  // Simpan hasil update ke LocalStorage
+  localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
+
+  // --- 2. RENDER UI SETELAH DATA LINK DRIVE TERSEDIA ---
   listContainer.innerHTML = orders.map((order, idx) => {
     const date    = new Date(order.date);
     const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -402,7 +417,6 @@ function renderOrderHistory(badgeOnly = false) {
     const hasPhysical = order.has_physical;
     const hasDigital  = order.has_digital;
 
-    // Item preview (max 2 thumbnail)
     const previewImgs = order.items.slice(0, 3).map(item =>
       `<img src="${item.image_url || ''}" alt="${item.name}"
             class="w-10 h-10 object-cover border border-brown/10 rounded-sm"
@@ -416,13 +430,11 @@ function renderOrderHistory(badgeOnly = false) {
         <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer select-none hover:bg-gray-50 transition-colors"
              onclick="toggleOrderCard('order-detail-${idx}', 'order-chevron-${idx}')">
           
-          <!-- Thumbnails -->
           <div class="flex items-center gap-1.5 shrink-0">
             ${previewImgs}
             ${order.items.length > 3 ? `<span class="text-[10px] text-muted font-semibold ml-1">+${order.items.length - 3}</span>` : ''}
           </div>
 
-          <!-- Info -->
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2 mb-0.5">
               <span class="text-xs font-mono font-bold text-brown">${order.order_id}</span>
@@ -434,7 +446,6 @@ function renderOrderHistory(badgeOnly = false) {
             <p class="text-xs text-muted mt-0.5">${order.items.length} produk · <span class="font-mono font-bold text-brown">${formatRpStatic(order.total)}</span></p>
           </div>
 
-          <!-- Chevron -->
           <svg id="order-chevron-${idx}" class="w-5 h-5 text-muted shrink-0 transition-transform duration-200"
                fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
@@ -445,11 +456,10 @@ function renderOrderHistory(badgeOnly = false) {
         <div id="order-detail-${idx}" class="hidden border-t border-gray-100">
           <div class="px-5 py-4 space-y-4">
 
-            <!-- Daftar Item -->
             <div>
               <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Produk yang Dipesan</p>
               <div class="space-y-3">
-                ${order.items.map(item => renderOrderItemCard(item, order.status)).join('')}
+                ${order.items.map(item => renderOrderItemCard(item, order.status, order.driveLink)).join('')}
               </div>
             </div>
 
@@ -457,7 +467,6 @@ function renderOrderHistory(badgeOnly = false) {
 
             ${hasPhysical ? renderDeliveryTimeline(order.status) : ''}
 
-            <!-- Ringkasan Biaya -->
             <div class="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
               <div class="flex justify-between text-muted text-xs">
                 <span>Subtotal Produk</span>
@@ -482,40 +491,19 @@ function renderOrderHistory(badgeOnly = false) {
   }).join('');
 }
 
-/** Render satu baris item dalam order detail */
 /**
  * Render kartu item produk di Riwayat Pesanan
  */
-function renderOrderItemCard(item, orderStatus) {
-  const isDigital = !['publicity'].includes((item.page_type || '').toLowerCase());
+function renderOrderItemCard(item, orderStatus, parentDriveLink = null) {
+  // MENGAMBIL LINK DRIVE DARI ITEM ATAU PARENT ORDER (parentDriveLink)
+  const driveLink = item.driveLink || item.x_digital_file_url || item.drive_link || item.x_drive_link || parentDriveLink || null;
   
-  // Link drive bisa dari item langsung atau dari data Odoo
-  let driveLink = item.x_digital_file_url || item.drive_link || item.x_drive_link || null;
+  // CEK KATEGORI DIGITAL
+  const isDigital = Boolean(driveLink) || !['publicity'].includes((item.page_type || '').toLowerCase());
   
-  // Cek apakah pembayaran sudah LUNAS
-  const isPaid = ['PAID', 'SUCCEEDED', 'SETTLED', 'CONFIRMED', 'COMPLETED', 'SALE', 'DONE'].includes((orderStatus || '').toUpperCase());
-
-  // Auto-fetch link Google Drive dari Odoo via API jika belum tersimpan di item lokal
-  if (isDigital && isPaid && !driveLink && item.id) {
-    fetch(`/api/products/${item.id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.product && data.product.x_digital_file_url) {
-          item.x_digital_file_url = data.product.x_digital_file_url;
-          item.drive_link = data.product.x_digital_file_url;
-          
-          // Update localStorage
-          try {
-            let history = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
-            localStorage.setItem('zahasky_order_history', JSON.stringify(history));
-          } catch(e) {}
-
-          // Render ulang UI agar tombol langsung muncul
-          renderOrderHistory();
-        }
-      })
-      .catch(err => console.warn('Gagal mengambil link digital Odoo:', err));
-  }
+  // CEK STATUS LUNAS
+  const statusUpper = (orderStatus || '').toUpperCase();
+  const isPaid = ['PAID', 'SUCCEEDED', 'SETTLED', 'CONFIRMED', 'COMPLETED', 'SALE', 'DONE'].includes(statusUpper);
 
   return `
     <div class="flex gap-3 py-3 border-b border-gray-50 last:border-0">
@@ -577,10 +565,10 @@ function renderShippingAddressBlock(addr) {
 /** Render timeline status pengiriman (untuk produk Publicity) */
 function renderDeliveryTimeline(status) {
   const steps = [
-    { key: 'processing', label: 'Pesanan Diterima',  icon: '📋', desc: 'Pesanan kamu sedang diverifikasi oleh tim Zahasky.' },
+    { key: 'processing', label: 'Pesanan Diterima',   icon: '📋', desc: 'Pesanan kamu sedang diverifikasi oleh tim Zahasky.' },
     { key: 'confirmed',  label: 'Pesanan Dikonfirmasi', icon: '✅', desc: 'Pembayaran terkonfirmasi, pesanan sedang dipersiapkan.' },
-    { key: 'shipped',    label: 'Dalam Pengiriman',  icon: '🚚', desc: 'Paket sedang dalam perjalanan menuju alamatmu.' },
-    { key: 'delivered',  label: 'Pesanan Selesai',   icon: '🎉', desc: 'Paket telah diterima. Terima kasih sudah berbelanja!' },
+    { key: 'shipped',    label: 'Dalam Pengiriman',   icon: '🚚', desc: 'Paket sedang dalam perjalanan menuju alamatmu.' },
+    { key: 'delivered',  label: 'Pesanan Selesai',    icon: '🎉', desc: 'Paket telah diterima. Terima kasih sudah berbelanja!' },
   ];
 
   const statusOrder = ['processing', 'confirmed', 'shipped', 'delivered'];
@@ -649,7 +637,7 @@ function getOrderStatusLabel(status) {
 
 function getOrderStatusColor(status) {
   const s = (status || '').toLowerCase();
-  const map = {
+  map = {
     'processing': 'bg-yellow-100 text-yellow-700',
     'pending':    'bg-yellow-100 text-yellow-700',
     'confirmed':  'bg-blue-100 text-blue-700',
