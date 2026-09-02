@@ -7,10 +7,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles / custom classes boleh ditambahkan di sini, mirip style.css di setup Bootstrap */
+/* Base Styles & Font Defaults */
 body {
   background-color: #FFFFFF;
   color: #1A1A1A;
+  font-family: 'Poppins', sans-serif;
 }
 
 .section-placeholder {
@@ -27,6 +28,204 @@ body {
 }
 
 /* Mobile nav: disembunyikan secara default, dibuka lewat JS toggle (lihat index.html) */
+h1, h2, h3, h4, .font-serif {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
 #mobile-menu.is-open {
   display: flex;
+}
+
+/* ======================================================== */
+/* SEPARATOR TRACK SCROLLBAR (REKAM JEJAK / TIMELINE)       */
+/* ======================================================== */
+#timeline-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+#timeline-container::-webkit-scrollbar-track {
+  background: #F4EFEA;
+  border-radius: 9999px;
+}
+
+#timeline-container::-webkit-scrollbar-thumb {
+  background: #C4A482;
+  border-radius: 9999px;
+}
+
+#timeline-container::-webkit-scrollbar-thumb:hover {
+  background: #B08D6A;
+}
+
+#timeline-container::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Custom Component Classes */
+@layer components {
+  /* --- NAVBAR NAVIGATION --- */
+  .nav-link {
+    @apply text-gray-400 font-medium transition-colors duration-200 hover:text-brown/70;
+  }
+
+  .nav-link-active {
+    @apply text-brown font-semibold transition-colors duration-200 hover:text-brown/70;
+  }
+
+  /* --- BUTTONS & FORMS --- */
+  .rounded-pill {
+    border-radius: 9999px;
+  }
+
+   .field-label {
+    @apply block text-sm font-semibold text-ink/90 mb-1.5;
+  }
+
+  .field-input {
+    @apply w-full px-4 py-3 text-sm text-ink bg-white border border-gray-200 rounded-2xl 
+           placeholder:text-gray-400 focus:outline-none focus:border-brown focus:ring-1 focus:ring-brown 
+           transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply w-full py-3.5 px-6 rounded-full bg-brown text-cream text-base font-semibold 
+           hover:bg-ink active:scale-[0.99] transition-all duration-200 shadow-sm cursor-pointer;
+  }
+
+
+/* Custom Styles Keranjang Belanja Zahasky */
+@layer components {
+  /* CSS Grid Khusus Layar Desktop (md ke atas) */
+  @media (min-width: 768px) {
+    .cart-table-grid {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 5fr) 2fr 2fr 2fr 1.5fr;
+      align-items: center;
+    }
+  }
+
+  /* Kuantitas Button */
+  .qty-btn {
+    @apply w-7 h-7 md:w-8 md:h-8 text-sm md:text-base font-medium text-brown hover:bg-brown/10 transition-colors flex items-center justify-center border-brown/30;
+  }
+
+  /* Gambar Produk Kotak 1:1 */
+  .cart-item-img {
+    @apply w-16 h-16 md:w-20 md:h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none;
+  }
+
+  /* Tombol Checkout Responsif */
+  .btn-checkout {
+    @apply bg-brown text-cream text-xs md:text-base font-bold px-6 md:px-10 h-10 md:h-14 hover:bg-ink transition-colors rounded-none shadow-none flex items-center justify-center shrink-0;
+  }
+}
+
+@layer components {
+  /* Grid Desktop */
+  @media (min-width: 768px) {
+    .cart-table-grid {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 5fr) 2fr 2fr 2fr 1.5fr;
+      align-items: center;
+    }
+  }
+
+  .cart-item-img {
+    @apply w-20 h-20 aspect-square object-cover bg-brown/5 shrink-0 border border-brown/10 rounded-none;
+  }
+}
+
+
+.cart-item-row {
+  @apply flex justify-between items-center py-2 px-0 md:contents;
+}
+
+.cart-item-label {
+  @apply text-xs text-muted font-normal md:hidden;
+}
+
+.cart-item-value {
+  @apply text-xs md:text-sm text-ink md:text-left;
+}
+
+/* Mobile specific - Cart Item */
+@media (max-width: 767px) {
+  .cart-table-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Setiap row di mobile jadi full-width dengan label */
+  .cart-item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(68, 27, 7, 0.05);
+  }
+
+  .cart-item-row:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Bottom bar - adjustments */
+@media (max-width: 767px) {
+  /* Tambah padding bottom untuk tidak tertutup fixed bar */
+  #cart-items-list {
+    padding-bottom: 1rem;
+  }
+
+  /* Hapus 'Total (X produk)' text di mobile untuk hemat space */
+  .summary-label {
+    display: none;
+  }
+
+  .summary-label.mobile-show {
+    display: inline !important;
+    font-size: 0.75rem;
+  }
+}
+
+  /* --- PROFILE COMPONENTS --- */
+  .tab-btn {
+    @apply px-5 py-2.5 text-sm font-medium text-gray-400 border-b-2 border-transparent transition-all hover:text-brown cursor-pointer;
+  }
+
+  .tab-btn-active {
+    @apply text-brown border-brown font-semibold;
+  }
+
+  /* --- CONTACT COMPONENTS --- */
+  .contact-card {
+    @apply flex items-center gap-4 p-5 rounded-2xl border border-gray-100 bg-white hover:border-brown/30 hover:shadow-sm transition-all duration-200;
+  }
+
+  .contact-icon-wrapper {
+    @apply w-12 h-12 shrink-0 rounded-full bg-brown/10 flex items-center justify-center text-brown;
+  }
+
+  /* --- SIDEBAR INDICATOR LABEL --- */
+  .section-sidebar-label {
+    @apply flex items-start gap-4;
+  }
+
+  .section-sidebar-line {
+    @apply w-1 h-12 bg-brown shrink-0 rounded-full mt-0.5;
+  }
+
+  .section-sidebar-text {
+    @apply text-sm md:text-base font-mono font-bold uppercase tracking-widest text-brown/80 pt-1;
+  }
+}
+
+/* Pastikan grid kolomnya selalu 6 kolom melembar ke samping */
+.cart-table-grid {
+  display: grid;
+  grid-template-columns: 40px 8fr 2fr 2fr 2fr 1fr;
+  align-items: center;
 }
