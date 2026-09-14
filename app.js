@@ -410,6 +410,10 @@ app.get('/api/orders/:orderId/digital-link', async (req, res) => {
 // =========================================================================
 // Menjalankan Server Middleware Node.js
 // =========================================================================
-app.listen(PORT, () => {
-    console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
