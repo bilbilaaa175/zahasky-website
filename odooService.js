@@ -1,61 +1,68 @@
 const xmlrpc = require('xmlrpc');
 
-// Konfigurasi Akun Odoo
-const config = {
-    url: process.env.ODOO_URL,
-    db: process.env.ODOO_DB, 
-    username: process.env.ODOO_USERNAME,
-    password: process.env.ODOO_PASSWORD
+// Konfigurasi Akun Odoo (Gunakan environment variables atau fallback)
+const ODOO_URL = process.env.ODOO_URL || 'https://zahasky-test-staging-37965509.dev.odoo.com';
+const ODOO_DB = process.env.ODOO_DB || 'zahasky-test-staging-37965509';
+const ODOO_USERNAME = process.env.ODOO_USERNAME || 'admin';
+const ODOO_PASSWORD = process.env.ODOO_PASSWORD || 'admin';
+
+// Parse URL untuk XML-RPC Client
+const urlParts = new URL(ODOO_URL);
+const isHttps = urlParts.protocol === 'https:';
+const host = urlParts.hostname;
+const port = urlParts.port || (isHttps ? 443 : 80);
+
+const createClient = (path) => {
+    return isHttps 
+        ? xmlrpc.createSecureClient({ host, port, path })
+        : xmlrpc.createClient({ host, port, path });
 };
 
-const commonClient = xmlrpc.createClient({ url: `${config.url}/xmlrpc/2/common` });
-const objectClient = xmlrpc.createClient({ url: `${config.url}/xmlrpc/2/object` });
-
-// 1. Fungsi internal untuk login
-function getUserId() {
+// 1. Helper Authenticate ke Odoo
+async function authenticate() {
     return new Promise((resolve, reject) => {
-        commonClient.methodCall('authenticate', [config.db, config.username, config.password, {}], (err, uid) => {
-            if (err) return reject(err);
-            if (!uid) return reject(new Error("Gagal login, periksa username/password!"));
+        const commonClient = createClient('/xmlrpc/2/common');
+        commonClient.methodCall('authenticate', [ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, {}], (error, uid) => {
+            if (error) return reject(error);
+            if (!uid) return reject(new Error("Login Odoo Gagal: Username/Password Salah"));
             resolve(uid);
         });
     });
 }
 
-// 2. Mengambil daftar produk
+// 2. Mengambil Daftar Produk
 async function getProducts() {
     try {
-        const uid = await getUserId();
+        const uid = await authenticate();
+        const objectClient = createClient('/xmlrpc/2/object');
+
         return new Promise((resolve, reject) => {
+            const fields = ['id', 'name', 'list_price', 'categ_id', 'image_128', 'x_designer_role', 'x_product_type'];
+            
             objectClient.methodCall('execute_kw', [
-                config.db, uid, config.password,
+                ODOO_DB, uid, ODOO_PASSWORD,
                 'product.template', 'search_read',
-                [[]],
-                { 
-                    fields: [
-                        'name', 'list_price', 'categ_id', 'image_128',
-                        'x_product_description', 'x_digital_file_url', 
-                        'x_product_type', 'x_series', 'x_designer_name', 
-                        'x_designer_role', 'x_file_format', 'x_file_size'
-                    ], 
-                    limit: 100 
-                }
-            ], (err, products) => {
-                if (err) return reject(err);
-                resolve(products);
+                [[['sale_ok', '=', true]]],
+                { fields: fields }
+            ], (error, products) => {
+                if (error) return reject(error);
+                resolve(products || []);
             });
         });
-    } catch (error) {
-        throw error;
+    } catch (err) {
+        console.error("Odoo Service Error (getProducts):", err);
+        throw err;
     }
 }
 
 // 3. Mengambil Detail 1 Produk
 async function getProductById(productId) {
-    const uid = await getUserId();
+    const uid = await authenticate();
+    const objectClient = createClient('/xmlrpc/2/object');
+
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db, uid, config.password,
+            ODOO_DB, uid, ODOO_PASSWORD,
             'product.template', 'search_read',
             [[['id', '=', parseInt(productId)]]],
             { 
@@ -76,7 +83,9 @@ async function getProductById(productId) {
 
 // 4. Membuat Sales Order (Quotation)
 async function createSalesOrder(partnerId, items, clientRef) {
-    const uid = await getUserId();
+    const uid = await authenticate();
+    const objectClient = createClient('/xmlrpc/2/object');
+
     return new Promise(async (resolve, reject) => {
         try {
             const itemList = Array.isArray(items) ? items : [items];
@@ -87,7 +96,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
                 
                 const variantIds = await new Promise((res, rej) => {
                     objectClient.methodCall('execute_kw', [
-                        config.db, uid, config.password,
+                        ODOO_DB, uid, ODOO_PASSWORD,
                         'product.product', 'search',
                         [[['product_tmpl_id', '=', pId]]]
                     ], (err, ids) => err ? rej(err) : res(ids));
@@ -104,7 +113,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
             }
 
             objectClient.methodCall('execute_kw', [
-                config.db, uid, config.password,
+                ODOO_DB, uid, ODOO_PASSWORD,
                 'sale.order', 'default_get',
                 [['pricelist_id', 'warehouse_id', 'team_id']]
             ], (defaultErr, defaultValues) => {
@@ -118,7 +127,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
                 };
 
                 objectClient.methodCall('execute_kw', [
-                    config.db, uid, config.password,
+                    ODOO_DB, uid, ODOO_PASSWORD,
                     'sale.order', 'create',
                     [orderData]
                 ], (createErr, orderId) => {
@@ -135,10 +144,12 @@ async function createSalesOrder(partnerId, items, clientRef) {
 
 // 5. Mengonfirmasi Quotation via ID
 async function confirmSalesOrder(orderId) {
-    const uid = await getUserId();
+    const uid = await authenticate();
+    const objectClient = createClient('/xmlrpc/2/object');
+
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db, uid, config.password,
+            ODOO_DB, uid, ODOO_PASSWORD,
             'sale.order', 'action_confirm',
             [[parseInt(orderId)]]
         ], (err, result) => {
@@ -154,10 +165,12 @@ async function confirmSalesOrder(orderId) {
 
 // 5b. Mengonfirmasi Quotation via Reference ID
 async function confirmSalesOrderByRef(clientRef) {
-    const uid = await getUserId();
+    const uid = await authenticate();
+    const objectClient = createClient('/xmlrpc/2/object');
+
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db, uid, config.password,
+            ODOO_DB, uid, ODOO_PASSWORD,
             'sale.order', 'search',
             [[['client_order_ref', '=', clientRef]]]
         ], async (err, orderIds) => {
@@ -186,10 +199,12 @@ async function confirmSalesOrderByRef(clientRef) {
 
 // 6. Mengambil Link Google Drive dari Product ID
 async function getDigitalFileUrl(productId) {
-    const uid = await getUserId();
+    const uid = await authenticate();
+    const objectClient = createClient('/xmlrpc/2/object');
+
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
-            config.db, uid, config.password,
+            ODOO_DB, uid, ODOO_PASSWORD,
             'product.template', 'search_read',
             [[['id', '=', parseInt(productId)]]],
             { fields: ['name', 'x_digital_file_url'] }
@@ -201,12 +216,12 @@ async function getDigitalFileUrl(productId) {
     });
 }
 
-// 7. Mengambil Link Google Drive dari Sales Order ID / Client Reference (SUDAH DIPERBAIKI)
+// 7. Mengambil Link Google Drive dari Sales Order ID / Client Reference
 async function getDigitalUrlByOrderId(orderId) {
-    const uid = await getUserId();
+    const uid = await authenticate();
+    const objectClient = createClient('/xmlrpc/2/object');
+
     return new Promise((resolve, reject) => {
-        
-        // Pencarian fleksibel: Jika orderId berupa ID angka atau Reference String (ZHK-...)
         let searchDomain = [[]];
         if (!isNaN(orderId)) {
             searchDomain = [[['id', '=', parseInt(orderId)]]];
@@ -215,7 +230,7 @@ async function getDigitalUrlByOrderId(orderId) {
         }
 
         objectClient.methodCall('execute_kw', [
-            config.db, uid, config.password,
+            ODOO_DB, uid, ODOO_PASSWORD,
             'sale.order', 'search_read',
             searchDomain,
             { fields: ['order_line', 'state'] }
@@ -224,16 +239,15 @@ async function getDigitalUrlByOrderId(orderId) {
                 return reject(err || new Error('Order tidak ditemukan di Odoo'));
             }
 
-            const orderState = orders[0].state; // 'draft', 'sale', 'done'
+            const orderState = orders[0].state;
             if (!orders[0].order_line || orders[0].order_line.length === 0) {
                 return resolve({ productId: null, productName: '', driveLink: null, orderState });
             }
 
             const lineId = orders[0].order_line[0];
 
-            // Read Order Line
             objectClient.methodCall('execute_kw', [
-                config.db, uid, config.password,
+                ODOO_DB, uid, ODOO_PASSWORD,
                 'sale.order.line', 'read',
                 [[lineId]],
                 { fields: ['product_id'] }
@@ -241,9 +255,8 @@ async function getDigitalUrlByOrderId(orderId) {
                 if (lineErr || !lines || lines.length === 0) return reject(lineErr);
                 const variantId = lines[0].product_id[0];
 
-                // Read Product Variant
                 objectClient.methodCall('execute_kw', [
-                    config.db, uid, config.password,
+                    ODOO_DB, uid, ODOO_PASSWORD,
                     'product.product', 'read',
                     [[variantId]],
                     { fields: ['product_tmpl_id'] }
@@ -251,9 +264,8 @@ async function getDigitalUrlByOrderId(orderId) {
                     if (vErr || !variants) return reject(vErr);
                     const templateId = variants[0].product_tmpl_id[0];
 
-                    // Read Product Template untuk ambil Link Drive
                     objectClient.methodCall('execute_kw', [
-                        config.db, uid, config.password,
+                        ODOO_DB, uid, ODOO_PASSWORD,
                         'product.template', 'read',
                         [[templateId]],
                         { fields: ['name', 'x_digital_file_url'] }
