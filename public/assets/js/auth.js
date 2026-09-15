@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         let history = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
         if (history.length > 0) {
-          history[0].status = 'CONFIRMED';
+          history[0].status = 'PAID';
           localStorage.setItem('zahasky_order_history', JSON.stringify(history));
         }
       } catch (e) { console.error('Status update error:', e); }
@@ -376,12 +376,14 @@ async function renderOrderHistory(badgeOnly = false) {
   // --- 1. SINKRONISASI ASYNC KE BACKEND TERLEBIH DAHULU ---
   const syncPromises = orders.map((order, index) => {
     const s = (order.status || '').toUpperCase();
-    if (['PENDING', 'PROCESSING', 'SALE', 'PAID', 'CONFIRMED'].includes(s) || !order.driveLink) {
+    
+    // Tarik status dari API jika statusnya belum lunas atau link belum ada
+    if (['DRAFT', 'QUOTATION', 'PENDING', 'PROCESSING', 'SALE', 'PAID', 'CONFIRMED'].includes(s) || !order.driveLink) {
       return fetch(`/api/payment/status/${order.order_id}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.success) {
-            if (['PAID', 'SUCCEEDED', 'SETTLED', 'SALE', 'CONFIRMED'].includes((data.status || '').toUpperCase())) {
+            if (['PAID', 'SUCCEEDED', 'SETTLED', 'SALE', 'CONFIRMED', 'COMPLETED', 'DONE'].includes((data.status || '').toUpperCase())) {
               orders[index].status = 'PAID';
             }
 
@@ -415,7 +417,7 @@ async function renderOrderHistory(badgeOnly = false) {
     const statusLabel = getOrderStatusLabel(order.status);
     const statusColor = getOrderStatusColor(order.status);
     const hasPhysical = order.has_physical;
-    const hasDigital  = order.has_digital;
+    const hasDigital  = order.has_digital ?? true; // Default true jika tidak didefinisikan
 
     const previewImgs = order.items.slice(0, 3).map(item =>
       `<img src="${item.image_url || ''}" alt="${item.name}"
@@ -465,8 +467,6 @@ async function renderOrderHistory(badgeOnly = false) {
 
             ${hasPhysical && order.shipping_address ? renderShippingAddressBlock(order.shipping_address) : ''}
 
-            ${hasPhysical ? renderDeliveryTimeline(order.status) : ''}
-
             <div class="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
               <div class="flex justify-between text-muted text-xs">
                 <span>Subtotal Produk</span>
@@ -495,11 +495,11 @@ async function renderOrderHistory(badgeOnly = false) {
  * Render kartu item produk di Riwayat Pesanan
  */
 function renderOrderItemCard(item, orderStatus, parentDriveLink = null) {
-  // MENGAMBIL LINK DRIVE DARI ITEM ATAU PARENT ORDER (parentDriveLink)
+  // MENGAMBIL LINK DRIVE DARI ITEM ATAU PARENT ORDER
   const driveLink = item.driveLink || item.x_digital_file_url || item.drive_link || item.x_drive_link || parentDriveLink || null;
   
-  // CEK KATEGORI DIGITAL
-  const isDigital = Boolean(driveLink) || !['publicity'].includes((item.page_type || '').toLowerCase());
+  // SEMUA ITEM DIANGGAP DIGITAL JIKA TIDAK ADA TIPE FISIK SPECIFIC
+  const isDigital = Boolean(driveLink) || !['publicity', 'physical'].includes((item.page_type || '').toLowerCase());
   
   // CEK STATUS LUNAS
   const statusUpper = (orderStatus || '').toUpperCase();
@@ -562,45 +562,6 @@ function renderShippingAddressBlock(addr) {
   `;
 }
 
-/** Render timeline status pengiriman (untuk produk Publicity) */
-function renderDeliveryTimeline(status) {
-  const steps = [
-    { key: 'processing', label: 'Pesanan Diterima',   icon: '📋', desc: 'Pesanan kamu sedang diverifikasi oleh tim Zahasky.' },
-    { key: 'confirmed',  label: 'Pesanan Dikonfirmasi', icon: '✅', desc: 'Pembayaran terkonfirmasi, pesanan sedang dipersiapkan.' },
-    { key: 'shipped',    label: 'Dalam Pengiriman',   icon: '🚚', desc: 'Paket sedang dalam perjalanan menuju alamatmu.' },
-    { key: 'delivered',  label: 'Pesanan Selesai',    icon: '🎉', desc: 'Paket telah diterima. Terima kasih sudah berbelanja!' },
-  ];
-
-  const statusOrder = ['processing', 'confirmed', 'shipped', 'delivered'];
-  const currentIdx  = statusOrder.indexOf((status || '').toLowerCase());
-
-  return `
-    <div class="border-t border-gray-100 pt-4">
-      <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-4">Status Pengiriman</p>
-      <div class="space-y-3">
-        ${steps.map((step, i) => {
-          const isDone    = i <= currentIdx;
-          const isCurrent = i === currentIdx;
-          return `
-            <div class="flex items-start gap-3">
-              <div class="shrink-0 flex flex-col items-center">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center text-base ${isDone ? 'bg-brown text-cream' : 'bg-gray-100 text-gray-400'}">
-                  ${step.icon}
-                </div>
-                ${i < steps.length - 1 ? `<div class="w-0.5 h-6 mt-1 ${isDone ? 'bg-brown' : 'bg-gray-200'}"></div>` : ''}
-              </div>
-              <div class="pt-1">
-                <p class="text-xs font-semibold ${isDone ? 'text-brown' : 'text-gray-400'}">${step.label} ${isCurrent ? '<span class="ml-1 text-[10px] px-1.5 py-0.5 bg-brown text-cream rounded-full font-semibold">Sekarang</span>' : ''}</p>
-                ${isDone ? `<p class="text-[10px] text-muted mt-0.5">${step.desc}</p>` : ''}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
-
 /** Toggle accordion order card */
 function toggleOrderCard(detailId, chevronId) {
   const detail  = document.getElementById(detailId);
@@ -617,37 +578,47 @@ function formatRpStatic(amount) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount || 0);
 }
 
-/** Label & warna status order */
+/** Label & warna status order produk digital */
 function getOrderStatusLabel(status) {
   const s = (status || '').toLowerCase();
   const map = {
-    'processing': 'Diproses',
-    'pending':    'Diproses',
-    'confirmed':  'Dikonfirmasi',
-    'paid':       'Dikonfirmasi',
-    'sale':       'Dikonfirmasi',
-    'shipped':    'Dikirim',
-    'delivered':  'Selesai',
-    'completed':  'Selesai',
-    'done':       'Selesai',
-    'cancelled':  'Dibatalkan',
+    // Belum bayar / Quotation Odoo (BIRU)
+    'draft':        'Menunggu Pembayaran',
+    'pending':      'Menunggu Pembayaran',
+    'quotation':    'Menunggu Pembayaran',
+    
+    // Lunas / Sales Order Odoo (HIJAU)
+    'paid':         'Pembayaran Selesai',
+    'sale':         'Pembayaran Selesai',
+    'confirmed':    'Pembayaran Selesai',
+    'completed':    'Pembayaran Selesai',
+    'done':         'Pembayaran Selesai',
+
+    // Dibatalkan (MERAH)
+    'cancelled':    'Dibatalkan',
+    'cancel':       'Dibatalkan'
   };
-  return map[s] || 'Dikonfirmasi';
+  return map[s] || 'Menunggu Pembayaran';
 }
 
 function getOrderStatusColor(status) {
   const s = (status || '').toLowerCase();
-  map = {
-    'processing': 'bg-yellow-100 text-yellow-700',
-    'pending':    'bg-yellow-100 text-yellow-700',
-    'confirmed':  'bg-blue-100 text-blue-700',
-    'paid':       'bg-green-100 text-green-700',
-    'sale':       'bg-green-100 text-green-700',
-    'shipped':    'bg-purple-100 text-purple-700',
-    'delivered':  'bg-green-100 text-green-700',
-    'completed':  'bg-green-100 text-green-700',
-    'done':       'bg-green-100 text-green-700',
-    'cancelled':  'bg-red-100 text-red-700',
+  const map = {
+    // Belum bayar / Quotation Odoo (BIRU)
+    'draft':        'bg-blue-100 text-blue-700',
+    'pending':      'bg-blue-100 text-blue-700',
+    'quotation':    'bg-blue-100 text-blue-700',
+    
+    // Lunas / Sales Order Odoo (HIJAU)
+    'paid':         'bg-green-100 text-green-700',
+    'sale':         'bg-green-100 text-green-700',
+    'confirmed':    'bg-green-100 text-green-700',
+    'completed':    'bg-green-100 text-green-700',
+    'done':         'bg-green-100 text-green-700',
+
+    // Dibatalkan (MERAH)
+    'cancelled':    'bg-red-100 text-red-700',
+    'cancel':       'bg-red-100 text-red-700'
   };
   return map[s] || 'bg-blue-100 text-blue-700';
 }
