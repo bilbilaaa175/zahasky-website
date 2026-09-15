@@ -1,10 +1,10 @@
 const xmlrpc = require('xmlrpc');
 
-// Konfigurasi Akun Odoo (Gunakan environment variables atau fallback)
+// Konfigurasi Akun Odoo (Gunakan Environment Variables)
 const ODOO_URL = process.env.ODOO_URL || 'https://zahasky-test-staging-37965509.dev.odoo.com';
 const ODOO_DB = process.env.ODOO_DB || 'zahasky-test-staging-37965509';
 const ODOO_USERNAME = process.env.ODOO_USERNAME || 'nabilahdyna@gmail.com';
-const ODOO_PASSWORD = process.env.ODOO_PASSWORD || 'Dyna571!?';
+const ODOO_PASSWORD = process.env.ODOO_PASSWORD; 
 
 // Parse URL untuk XML-RPC Client
 const urlParts = new URL(ODOO_URL);
@@ -30,28 +30,48 @@ async function authenticate() {
     });
 }
 
-// 2. Mengambil Daftar Produk
+// Helper Internal untuk Fetch Data dengan fallback field aman jika custom field gagal
+function executeSearchRead(objectClient, uid, model, domain, fields) {
+    return new Promise((resolve, reject) => {
+        objectClient.methodCall('execute_kw', [
+            ODOO_DB, uid, ODOO_PASSWORD,
+            model, 'search_read',
+            domain,
+            { fields: fields, limit: 100 }
+        ], (err, result) => {
+            if (err) return reject(err);
+            resolve(result || []);
+        });
+    });
+}
+
+// 2. Mengambil Daftar Produk (Dilengkapi Fallback Field Murni)
 async function getProducts() {
     try {
         const uid = await authenticate();
         const objectClient = createClient('/xmlrpc/2/object');
+        console.log(`✓ Berhasil terkoneksi ke Odoo. User ID: ${uid}`);
 
-        return new Promise((resolve, reject) => {
-            const fields = ['id', 'name', 'list_price', 'categ_id', 'image_128', 'x_designer_role', 'x_product_type'];
-            
-            objectClient.methodCall('execute_kw', [
-                ODOO_DB, uid, ODOO_PASSWORD,
-                'product.template', 'search_read',
-                [[['sale_ok', '=', true]]],
-                { fields: fields }
-            ], (error, products) => {
-                if (error) return reject(error);
-                resolve(products || []);
-            });
-        });
-    } catch (err) {
-        console.error("Odoo Service Error (getProducts):", err);
-        throw err;
+        const fullFields = [
+            'name', 'list_price', 'categ_id', 'image_128',
+            'x_product_description', 'x_digital_file_url', 
+            'x_product_type', 'x_series', 'x_designer_name', 
+            'x_designer_role', 'x_file_format', 'x_file_size'
+        ];
+
+        const basicFields = ['name', 'list_price', 'categ_id', 'image_128'];
+
+        try {
+            // Coba ambil dengan semua custom fields
+            return await executeSearchRead(objectClient, uid, 'product.template', [[]], fullFields);
+        } catch (customErr) {
+            console.warn("⚠️ Custom fields bermasalah/belum dibuat di Odoo. Fallback ke field standar Odoo.");
+            // Jika ada custom field yang invalid di Odoo, ambil field dasar agar katalog tidak crash 500
+            return await executeSearchRead(objectClient, uid, 'product.template', [[]], basicFields);
+        }
+    } catch (error) {
+        console.error("Odoo Service Error (getProducts):", error);
+        throw error;
     }
 }
 
@@ -59,26 +79,26 @@ async function getProducts() {
 async function getProductById(productId) {
     const uid = await authenticate();
     const objectClient = createClient('/xmlrpc/2/object');
+    const pId = parseInt(productId);
 
-    return new Promise((resolve, reject) => {
-        objectClient.methodCall('execute_kw', [
-            ODOO_DB, uid, ODOO_PASSWORD,
-            'product.template', 'search_read',
-            [[['id', '=', parseInt(productId)]]],
-            { 
-                fields: [
-                    'name', 'list_price', 'categ_id', 'image_128',
-                    'x_product_description', 'x_digital_file_url', 
-                    'x_product_type', 'x_series', 'x_designer_name', 
-                    'x_designer_role', 'x_file_format', 'x_file_size'
-                ] 
-            }
-        ], (err, products) => {
-            if (err) return reject(err);
-            if (!products || products.length === 0) return reject(new Error('Produk tidak ditemukan'));
-            resolve(products[0]);
-        });
-    });
+    const fullFields = [
+        'name', 'list_price', 'categ_id', 'image_128',
+        'x_product_description', 'x_digital_file_url', 
+        'x_product_type', 'x_series', 'x_designer_name', 
+        'x_designer_role', 'x_file_format', 'x_file_size'
+    ];
+
+    const basicFields = ['name', 'list_price', 'categ_id', 'image_128'];
+
+    try {
+        const products = await executeSearchRead(objectClient, uid, 'product.template', [[['id', '=', pId]]], fullFields);
+        if (!products || products.length === 0) throw new Error('Produk tidak ditemukan');
+        return products[0];
+    } catch (err) {
+        const products = await executeSearchRead(objectClient, uid, 'product.template', [[['id', '=', pId]]], basicFields);
+        if (!products || products.length === 0) throw new Error('Produk tidak ditemukan');
+        return products[0];
+    }
 }
 
 // 4. Membuat Sales Order (Quotation)
@@ -106,7 +126,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
 
                 orderLines.push([0, 0, {
                     'product_id': realProductId,
-                    'name': item.name || item.productName || 'Produk Zahasky',
+                    'name': item.name || item.productName || 'Produk Digital',
                     'price_unit': parseFloat(item.price || 0),
                     'product_uom_qty': parseInt(item.quantity || 1)
                 }]);
@@ -132,7 +152,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
                     [orderData]
                 ], (createErr, orderId) => {
                     if (createErr) return reject(createErr);
-                    console.log(`✓ [Odoo] Quotation (${clientRef}) berhasil dibuat dengan ID Odoo #${orderId}`);
+                    console.log(`✓ [Odoo] Quotation (${clientRef}) berhasil dibuat dengan ID #${orderId}`);
                     resolve(orderId);
                 });
             });
@@ -153,11 +173,8 @@ async function confirmSalesOrder(orderId) {
             'sale.order', 'action_confirm',
             [[parseInt(orderId)]]
         ], (err, result) => {
-            if (err) {
-                console.error(`✗ Gagal mengonfirmasi Order ID ${orderId} di Odoo:`, err);
-                return reject(err);
-            }
-            console.log(`✓ [Odoo] Order ID ${orderId} berhasil dikonfirmasi!`);
+            if (err) return reject(err);
+            console.log(`✓ [Odoo] Order ID #${orderId} dikonfirmasi!`);
             resolve(result);
         });
     });
@@ -183,7 +200,7 @@ async function confirmSalesOrderByRef(clientRef) {
             }
 
             if (!targetOrderId) {
-                console.warn(`⚠️ [Odoo] Quotation dengan reference ID ${clientRef} tidak ditemukan di Odoo.`);
+                console.warn(`⚠️ [Odoo] Quotation Ref ${clientRef} tidak ditemukan.`);
                 return resolve(null);
             }
 
@@ -216,7 +233,7 @@ async function getDigitalFileUrl(productId) {
     });
 }
 
-// 7. Mengambil Link Google Drive dari Sales Order ID / Client Reference
+// 7. Mengambil Link Google Drive dari Order ID / Reference ID
 async function getDigitalUrlByOrderId(orderId) {
     const uid = await authenticate();
     const objectClient = createClient('/xmlrpc/2/object');
