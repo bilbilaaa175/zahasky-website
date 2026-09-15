@@ -3,8 +3,8 @@ const xmlrpc = require('xmlrpc');
 // Konfigurasi Akun Odoo (Gunakan environment variables atau fallback)
 const ODOO_URL = process.env.ODOO_URL || 'https://zahasky-test-staging-37965509.dev.odoo.com';
 const ODOO_DB = process.env.ODOO_DB || 'zahasky-test-staging-37965509';
-const ODOO_USERNAME = process.env.ODOO_USERNAME || 'admin';
-const ODOO_PASSWORD = process.env.ODOO_PASSWORD || 'admin';
+const ODOO_USERNAME = process.env.ODOO_USERNAME || 'nabilahdyna@gmail.com';
+const ODOO_PASSWORD = process.env.ODOO_PASSWORD || 'Dyna571!?';
 
 // Parse URL untuk XML-RPC Client
 const urlParts = new URL(ODOO_URL);
