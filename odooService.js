@@ -45,6 +45,20 @@ function executeSearchRead(objectClient, uid, model, domain, fields) {
     });
 }
 
+// Helper Internal untuk generic execute_kw
+function executeKw(objectClient, uid, model, method, args, kwargs = {}) {
+    return new Promise((resolve, reject) => {
+        objectClient.methodCall('execute_kw', [
+            ODOO_DB, uid, ODOO_PASSWORD,
+            model, method,
+            args, kwargs
+        ], (err, result) => {
+            if (err) return reject(err);
+            resolve(result);
+        });
+    });
+}
+
 // 2. Mengambil Daftar Produk (Dilengkapi Fallback Field Murni)
 async function getProducts() {
     try {
@@ -301,6 +315,99 @@ async function getDigitalUrlByOrderId(orderId) {
     });
 }
 
+// 8. Ambil Daftar Sales Order dari Odoo Berdasarkan Email Customer
+async function getOrdersByCustomerEmail(customerEmail) {
+    try {
+        if (!customerEmail) return [];
+
+        const uid = await authenticate();
+        const objectClient = createClient('/xmlrpc/2/object');
+
+        // A. Cari Partner IDs berdasarkan Email
+        const partnerIds = await executeKw(
+            objectClient, uid,
+            'res.partner', 'search',
+            [[['email', '=', customerEmail]]]
+        ).catch(() => []);
+
+        // Buat Domain Pencarian
+        let domain = [];
+        if (partnerIds && partnerIds.length > 0) {
+            domain = ['|', ['partner_id', 'in', partnerIds], ['client_order_ref', 'ilike', customerEmail]];
+        } else {
+            domain = [['client_order_ref', 'ilike', customerEmail]];
+        }
+
+        // B. Search Read Sale Orders
+        const orders = await executeSearchRead(
+            objectClient, uid,
+            'sale.order',
+            [domain],
+            ['id', 'name', 'client_order_ref', 'state', 'amount_total', 'date_order', 'order_line']
+        );
+
+        if (!orders || orders.length === 0) {
+            return [];
+        }
+
+        // C. Map Detail Items & Link Drive
+        const formattedOrders = await Promise.all(orders.map(async (ord) => {
+            let items = [];
+            if (ord.order_line && ord.order_line.length > 0) {
+                const lines = await executeSearchRead(
+                    objectClient, uid,
+                    'sale.order.line',
+                    [[['id', 'in', ord.order_line]]],
+                    ['product_id', 'name', 'product_uom_qty', 'price_unit']
+                ).catch(() => []);
+
+                items = lines.map(line => {
+                    const pId = Array.isArray(line.product_id) ? line.product_id[0] : 0;
+                    const pName = Array.isArray(line.product_id) ? line.product_id[1] : line.name;
+                    return {
+                        id: pId,
+                        name: pName,
+                        quantity: line.product_uom_qty || 1,
+                        price: line.price_unit || 0,
+                        image_url: `/api/products/${pId}/image`
+                    };
+                });
+            }
+
+            const isPaid = ['sale', 'done'].includes(ord.state);
+            let driveLink = null;
+
+            if (isPaid) {
+                try {
+                    const digitalInfo = await getDigitalUrlByOrderId(ord.client_order_ref || ord.id);
+                    driveLink = digitalInfo ? digitalInfo.driveLink : null;
+                } catch {
+                    driveLink = null;
+                }
+            }
+
+            return {
+                order_id: ord.client_order_ref || ord.name,
+                odoo_name: ord.name,
+                status: isPaid ? 'PAID' : 'PENDING',
+                orderState: ord.state,
+                total: ord.amount_total,
+                subtotal: ord.amount_total,
+                date: ord.date_order,
+                payment_method: 'Xendit',
+                driveLink: driveLink,
+                items: items
+            };
+        }));
+
+        return formattedOrders;
+
+    } catch (error) {
+        console.error("❌ Error di getOrdersByCustomerEmail:", error.message);
+        return [];
+    }
+}
+
 module.exports = { 
     getProducts, 
     getProductById, 
@@ -308,5 +415,6 @@ module.exports = {
     confirmSalesOrder, 
     confirmSalesOrderByRef,
     getDigitalFileUrl, 
-    getDigitalUrlByOrderId 
+    getDigitalUrlByOrderId,
+    getOrdersByCustomerEmail 
 };
