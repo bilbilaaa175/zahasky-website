@@ -3,10 +3,8 @@ require('dotenv').config();
 
 const path = require('path');
 const express = require('express');
-// Menggunakan cara import modular sesuai dengan SDK Xendit versi terbaru
 const { Xendit } = require('xendit-node'); 
 
-// PERBAIKAN: Menambahkan getOrdersByCustomerEmail ke dalam daftar import
 const { 
     getProducts, 
     getProductById, 
@@ -23,19 +21,18 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Menyajikan frontend skeleton (public/index.html, assets, dll)
+// Menyajikan frontend static
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Inisialisasi Xendit menggunakan SDK versi terbaru
+// Inisialisasi SDK Xendit
 const xenditClient = new Xendit({
     secretKey: process.env.XENDIT_SECRET_KEY
 });
 
-// Mengambil modul Invoice dari instance xenditClient
 const { Invoice } = xenditClient;
 
 // =========================================================================
-// HELPER: Format Data Produk & Mapping Role
+// HELPER
 // =========================================================================
 
 const ROLE_MAP = {
@@ -75,10 +72,9 @@ function filterByCategory(products, targetCategory) {
 }
 
 // =========================================================================
-// ENDPOINT PRODUK & KATEGORI
+// ENDPOINT PRODUK
 // =========================================================================
 
-// 1. Ambil Semua Produk dari Odoo
 app.get('/api/products', async (req, res) => {
     try {
         const odooData = await getProducts();
@@ -89,7 +85,6 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// 2. Endpoint Khusus Catalog
 app.get('/api/catalog', async (req, res) => {
     try {
         const allProducts = await getProducts();
@@ -102,7 +97,6 @@ app.get('/api/catalog', async (req, res) => {
     }
 });
 
-// 3. Endpoint Khusus Package
 app.get('/api/package', async (req, res) => {
     try {
         const allProducts = await getProducts();
@@ -115,7 +109,6 @@ app.get('/api/package', async (req, res) => {
     }
 });
 
-// 4. Endpoint Khusus Publicity
 app.get('/api/publicity', async (req, res) => {
     try {
         const allProducts = await getProducts();
@@ -128,7 +121,6 @@ app.get('/api/publicity', async (req, res) => {
     }
 });
 
-// 5. Detail 1 Produk Berdasarkan ID
 app.get('/api/products/:id', async (req, res) => {
     try {
         const product = await getProductById(req.params.id);
@@ -139,7 +131,6 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-// 6. Menyajikan File Gambar (.png) Asli
 app.get('/api/products/:id/image', async (req, res) => {
     try {
         const product = await getProductById(req.params.id);
@@ -163,7 +154,6 @@ app.get('/api/products/:id/image', async (req, res) => {
 // ENDPOINT PEMBAYARAN & CHECKOUT
 // =========================================================================
 
-// 1. Process Checkout (Quotation Odoo + Invoice Xendit)
 app.post('/api/checkout', async (req, res) => {
     try {
         const { orderId, amount, customerEmail, payerEmail, customerName, items, description, bankCode } = req.body; 
@@ -172,15 +162,15 @@ app.post('/api/checkout', async (req, res) => {
         const totalAmount = parseFloat(amount || 0);
         const targetEmail = customerEmail || payerEmail || 'customer@zahasky.com';
 
-        // A. Buat Quotation di Odoo
+        // A. Buat Quotation di Odoo DENGAN EMAIL & NAMA PEMBELI
         try {
-            const odooOrderId = await createSalesOrder(1, items, externalId);
-            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
+            const odooOrderId = await createSalesOrder(targetEmail, items, externalId, customerName);
+            console.log(`✓ [Odoo Checkout] Quotation (${externalId}) dibuat di Odoo untuk ${targetEmail} (ID #${odooOrderId})`);
         } catch (odooErr) {
-            console.warn(`⚠️ [Odoo] Gagal membuat Quotation di Odoo: ${odooErr.message}`);
+            console.warn(`⚠️ [Odoo Checkout] Gagal membuat Quotation: ${odooErr.message}`);
         }
 
-        // B. Mapping filter paymentMethods Xendit Invoice
+        // B. Mapping payment method
         let paymentMethodsFilter = undefined;
         if (bankCode) {
             const code = bankCode.toUpperCase();
@@ -213,7 +203,6 @@ app.post('/api/checkout', async (req, res) => {
 
         const xenditInvoice = await Invoice.createInvoice({ data: invoiceData });
         const invoiceUrl = xenditInvoice.invoiceUrl || xenditInvoice.invoice_url;
-        console.log(`✓ Invoice Xendit berhasil dibuat untuk ${externalId}: ${invoiceUrl}`);
 
         res.json({
             success: true,
@@ -228,15 +217,15 @@ app.post('/api/checkout', async (req, res) => {
     }
 });
 
-// 2. Create Virtual Account
 app.post('/api/payment/va', async (req, res) => {
     try {
         const { orderId, amount, bankCode, customerName, customerEmail, items } = req.body;
         const externalId = orderId || `ZHK-${Date.now()}`;
+        const targetEmail = customerEmail || 'customer@zahasky.com';
 
         try {
-            const odooOrderId = await createSalesOrder(1, items || [], externalId);
-            console.log(`✓ [Odoo VA] Quotation (${externalId}) sukses dibuat di Odoo ID: #${odooOrderId}`);
+            const odooOrderId = await createSalesOrder(targetEmail, items || [], externalId, customerName);
+            console.log(`✓ [Odoo VA] Quotation (${externalId}) dibuat di Odoo untuk ${targetEmail} (ID #${odooOrderId})`);
         } catch (odooErr) {
             console.warn(`⚠️ [Odoo VA] Gagal membuat Quotation: ${odooErr.message}`);
         }
@@ -276,18 +265,18 @@ app.post('/api/payment/va', async (req, res) => {
     }
 });
 
-// 3. Create E-Wallet Charge / Invoice
 app.post('/api/payment/ewallet', async (req, res) => {
     try {
-        const { orderId, amount, ewalletType, items, customerEmail, phone } = req.body;
+        const { orderId, amount, ewalletType, items, customerEmail, customerName } = req.body;
         const externalId = orderId || `ZHK-${Date.now()}`;
         const totalAmount = parseFloat(amount || 0);
+        const targetEmail = customerEmail || 'customer@zahasky.com';
 
         try {
-            const odooOrderId = await createSalesOrder(1, items || [], externalId);
-            console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
+            const odooOrderId = await createSalesOrder(targetEmail, items || [], externalId, customerName);
+            console.log(`✓ [Odoo E-Wallet] Quotation (${externalId}) dibuat di Odoo untuk ${targetEmail} (ID #${odooOrderId})`);
         } catch (odooErr) {
-            console.warn(`⚠️ [Odoo] Gagal membuat Quotation untuk e-wallet: ${odooErr.message}`);
+            console.warn(`⚠️ [Odoo E-Wallet] Gagal membuat Quotation: ${odooErr.message}`);
         }
 
         let ewalletMethod = (ewalletType || '').toUpperCase();
@@ -298,7 +287,7 @@ app.post('/api/payment/ewallet', async (req, res) => {
         const invoiceData = {
             externalId: externalId,
             amount: totalAmount,
-            payerEmail: customerEmail || 'customer@zahasky.com',
+            payerEmail: targetEmail,
             description: `Pembayaran E-Wallet Zahasky (${externalId})`,
             invoiceDuration: '86400',
             successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
@@ -313,7 +302,6 @@ app.post('/api/payment/ewallet', async (req, res) => {
 
         const createdInvoice = await Invoice.createInvoice({ data: invoiceData });
         const invoiceUrl = createdInvoice.invoiceUrl || createdInvoice.invoice_url;
-        console.log(`✓ Invoice E-Wallet (${ewalletMethod}) berhasil dibuat untuk ${externalId}: ${invoiceUrl}`);
 
         res.json({
             success: true,
@@ -330,7 +318,7 @@ app.post('/api/payment/ewallet', async (req, res) => {
 });
 
 // =========================================================================
-// ENDPOINT WEBHOOK XENDIT
+// WEBHOOK
 // =========================================================================
 
 const handleXenditWebhook = async (req, res) => {
@@ -351,8 +339,6 @@ const handleXenditWebhook = async (req, res) => {
         const isPaidStatus = ['PAID', 'SETTLED', 'SUCCEEDED', 'COMPLETED', 'INVOICE.PAID', 'VIRTUAL_ACCOUNT.PAID'].some(s => status.includes(s));
 
         if (isPaidStatus && externalId) {
-            console.log(`✓ [Webhook] Pembayaran LUNAS (${externalId}). Mengonfirmasi Quotation di Odoo...`);
-            
             try {
                 await confirmSalesOrderByRef(externalId);
                 console.log(`🎉 [Odoo Delivery] Quotation (${externalId}) sukses dikonfirmasi di Odoo!`);
@@ -373,18 +359,15 @@ app.post('/api/xendit/webhook', handleXenditWebhook);
 app.post('/api/webhook/xendit', handleXenditWebhook);
 
 // =========================================================================
-// ENDPOINT STATUS ORDERS & DIGITAL LINK (SAFE VERSION)
+// ENDPOINT STATUS ORDERS & DIGITAL LINK
 // =========================================================================
 
-// 1. Polling Cek Status Pembayaran & Ambil Link Drive
 app.get('/api/payment/status/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
         
         const digitalInfo = await getDigitalUrlByOrderId(orderId);
         const isPaid = digitalInfo && (digitalInfo.orderState === 'sale' || digitalInfo.orderState === 'done');
-        
-        console.log(`[Status Cek] Order ID: ${orderId} | State Odoo: ${digitalInfo?.orderState} | Link Drive: ${digitalInfo?.driveLink}`);
 
         let statusLabel = 'Menunggu Pembayaran'; 
         if (isPaid) {
@@ -413,7 +396,6 @@ app.get('/api/payment/status/:orderId', async (req, res) => {
     }
 });
 
-// 2. Khusus Ambil Link Google Drive (Dengan Null-Check Guard)
 app.get('/api/orders/:orderId/digital-link', async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -440,7 +422,6 @@ app.get('/api/orders/:orderId/digital-link', async (req, res) => {
     }
 });
 
-// 3. Ambil Riwayat Pesanan Berdasarkan Email / User ID
 app.get('/api/orders/user/:email', async (req, res) => {
     try {
         const { email } = req.params;

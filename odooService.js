@@ -59,12 +59,49 @@ function executeKw(objectClient, uid, model, method, args, kwargs = {}) {
     });
 }
 
-// 2. Mengambil Daftar Produk (Dilengkapi Fallback Field Murni)
+// Helper untuk Mencari atau Membuat Partner (Customer) di Odoo berdasarkan Email
+async function findOrCreatePartner(email, name) {
+    if (!email || email === 'customer@zahasky.com') return 1;
+
+    try {
+        const uid = await authenticate();
+        const objectClient = createClient('/xmlrpc/2/object');
+
+        // Cari partner yang sudah ada berdasarkan email
+        const existingPartners = await executeSearchRead(
+            objectClient, uid,
+            'res.partner',
+            [[['email', '=', email]]],
+            ['id', 'name', 'email']
+        );
+
+        if (existingPartners && existingPartners.length > 0) {
+            return existingPartners[0].id;
+        }
+
+        // Jika belum ada, buat Partner/Customer baru di Odoo
+        const partnerName = name || email.split('@')[0];
+        const newPartnerId = await executeKw(
+            objectClient, uid,
+            'res.partner', 'create',
+            [{
+                'name': partnerName,
+                'email': email
+            }]
+        );
+        console.log(`✓ [Odoo Partner] Customer baru dibuat di Odoo: ${partnerName} (${email}) - ID #${newPartnerId}`);
+        return newPartnerId;
+    } catch (err) {
+        console.warn(`⚠️ [Odoo Partner Warning] Gagal cari/buat partner (${email}), fallback ke ID 1:`, err.message);
+        return 1;
+    }
+}
+
+// 2. Mengambil Daftar Produk
 async function getProducts() {
     try {
         const uid = await authenticate();
         const objectClient = createClient('/xmlrpc/2/object');
-        console.log(`✓ Berhasil terkoneksi ke Odoo. User ID: ${uid}`);
 
         const fullFields = [
             'name', 'list_price', 'categ_id', 'image_128',
@@ -76,11 +113,9 @@ async function getProducts() {
         const basicFields = ['name', 'list_price', 'categ_id', 'image_128'];
 
         try {
-            // Coba ambil dengan semua custom fields
             return await executeSearchRead(objectClient, uid, 'product.template', [[]], fullFields);
         } catch (customErr) {
-            console.warn("⚠️ Custom fields bermasalah/belum dibuat di Odoo. Fallback ke field standar Odoo.");
-            // Jika ada custom field yang invalid di Odoo, ambil field dasar agar katalog tidak crash 500
+            console.warn("⚠️ Custom fields bermasalah di Odoo. Fallback ke field standar.");
             return await executeSearchRead(objectClient, uid, 'product.template', [[]], basicFields);
         }
     } catch (error) {
@@ -115,10 +150,13 @@ async function getProductById(productId) {
     }
 }
 
-// 4. Membuat Sales Order (Quotation)
-async function createSalesOrder(partnerId, items, clientRef) {
+// 4. Membuat Sales Order (Quotation) - Terhubung ke Email Pembeli
+async function createSalesOrder(customerEmail, items, clientRef, customerName) {
     const uid = await authenticate();
     const objectClient = createClient('/xmlrpc/2/object');
+
+    // Cari/Buat ID Partner Pembeli berdasarkan Email
+    const partnerId = await findOrCreatePartner(customerEmail, customerName);
 
     return new Promise(async (resolve, reject) => {
         try {
@@ -155,7 +193,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
 
                 const orderData = {
                     ...defaultValues,
-                    'partner_id': partnerId || 1,
+                    'partner_id': partnerId,
                     'client_order_ref': clientRef || '',
                     'order_line': orderLines
                 };
@@ -166,7 +204,7 @@ async function createSalesOrder(partnerId, items, clientRef) {
                     [orderData]
                 ], (createErr, orderId) => {
                     if (createErr) return reject(createErr);
-                    console.log(`✓ [Odoo] Quotation (${clientRef}) berhasil dibuat dengan ID #${orderId}`);
+                    console.log(`✓ [Odoo] Quotation (${clientRef}) berhasil dibuat untuk Partner #${partnerId} dengan Order ID #${orderId}`);
                     resolve(orderId);
                 });
             });
@@ -188,7 +226,7 @@ async function confirmSalesOrder(orderId) {
             [[parseInt(orderId)]]
         ], (err, result) => {
             if (err) return reject(err);
-            console.log(`✓ [Odoo] Order ID #${orderId} dikonfirmasi!`);
+            console.log(`✓ [Odoo] Order ID #${orderId} dikonfirmasi menjadi Sales Order!`);
             resolve(result);
         });
     });
@@ -203,7 +241,7 @@ async function confirmSalesOrderByRef(clientRef) {
         objectClient.methodCall('execute_kw', [
             ODOO_DB, uid, ODOO_PASSWORD,
             'sale.order', 'search',
-            [[['client_order_ref', '=', clientRef]]]
+            [[['client_order_ref', '=', String(clientRef)]]]
         ], async (err, orderIds) => {
             if (err) return reject(err);
             
@@ -323,14 +361,14 @@ async function getOrdersByCustomerEmail(customerEmail) {
         const uid = await authenticate();
         const objectClient = createClient('/xmlrpc/2/object');
 
-        // A. Cari Partner IDs berdasarkan Email
+        // A. Cari ID Partner berdasarkan Email
         const partnerIds = await executeKw(
             objectClient, uid,
             'res.partner', 'search',
             [[['email', '=', customerEmail]]]
         ).catch(() => []);
 
-        // Buat Domain Pencarian
+        // Domain pencarian: Cari order yang dimiliki oleh partner_id user atau client_order_ref cocok
         let domain = [];
         if (partnerIds && partnerIds.length > 0) {
             domain = ['|', ['partner_id', 'in', partnerIds], ['client_order_ref', 'ilike', customerEmail]];
@@ -338,7 +376,7 @@ async function getOrdersByCustomerEmail(customerEmail) {
             domain = [['client_order_ref', 'ilike', customerEmail]];
         }
 
-        // B. Search Read Sale Orders
+        // B. Search Sale Orders
         const orders = await executeSearchRead(
             objectClient, uid,
             'sale.order',
@@ -350,7 +388,7 @@ async function getOrdersByCustomerEmail(customerEmail) {
             return [];
         }
 
-        // C. Map Detail Items & Link Drive
+        // C. Map Detail Items & Drive Link
         const formattedOrders = await Promise.all(orders.map(async (ord) => {
             let items = [];
             if (ord.order_line && ord.order_line.length > 0) {
