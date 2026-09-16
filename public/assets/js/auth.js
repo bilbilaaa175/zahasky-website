@@ -2,7 +2,7 @@
  * auth.js
  * -----------------------------------------------------------------------
  * Logika gabungan untuk Register, Login, Manajemen Profile,
- * dan Riwayat Pesanan (Order History).
+ * dan Riwayat Pesanan (Order History) terintegrasi Odoo & Supabase.
  * -----------------------------------------------------------------------
  */
 
@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoutBtn = document.getElementById("logout-btn");
   const dbClient = getDbClient();
 
-  // LOGOUT HANDLER (Hanya menghapus token sesi, TIDAK menghapus localStorage riwayat pesanan)
+  // LOGOUT HANDLER (Hanya hapus token auth, TIDAK hapus localStorage riwayat)
   if (logoutBtn && dbClient) {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -348,41 +348,53 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// 4. RENDER ORDER HISTORY — Riwayat Pesanan di Profil
+// 4. RENDER ORDER HISTORY — Riwayat Pesanan Sinkron Lintas Device
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * @param {boolean} badgeOnly - Jika true, hanya update badge hitungan, tidak render kartu
+ * @param {boolean} badgeOnly - Jika true, hanya update badge hitungan
  */
 async function renderOrderHistory(badgeOnly = false) {
   let orders = [];
 
-  // 1. Coba baca dari localStorage lokal dulu
-  try {
-    orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
-  } catch { 
-    orders = []; 
-  }
-
-  // 2. Jika di localStorage kosong (Misal baru login di device/browser lain), panggil API Backend berdasarkan email user
+  // 1. Ambil Sesi User Login
   const dbClient = getDbClient();
+  let userEmail = null;
+
   if (dbClient && dbClient.auth) {
     try {
       const { data: { session } } = await dbClient.auth.getSession();
-      
-      if (session?.user?.email && orders.length === 0) {
-        const userEmail = session.user.email;
-        const res = await fetch(`/api/orders/user/${encodeURIComponent(userEmail)}`);
-        const result = await res.json();
+      userEmail = session?.user?.email || null;
+    } catch (err) {
+      console.warn("⚠️ Gagal membaca sesi Supabase:", err);
+    }
+  }
 
-        if (result && result.success && Array.isArray(result.orders)) {
-          orders = result.orders;
-          localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
-        }
+  // 2. SINKRONISASI REAL-TIME: SELALU FETCH PESANAN TERBARU DARI ODOO SERVER
+  if (userEmail) {
+    try {
+      const res = await fetch(`/api/orders/user/${encodeURIComponent(userEmail)}`);
+      const result = await res.json();
+
+      if (result && result.success && Array.isArray(result.orders) && result.orders.length > 0) {
+        orders = result.orders;
+        // Simpan versi paling segar dari Odoo ke LocalStorage
+        localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
+      } else {
+        // Fallback ke cache jika Odoo belum merespons
+        orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
       }
     } catch (err) {
-      console.warn("⚠️ Gagal mengambil riwayat pesanan dari backend:", err);
+      console.warn("⚠️ Gagal fetch order dari backend, menggunakan cache lokal:", err);
+      try {
+        orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
+      } catch { orders = []; }
     }
+  } else {
+    // Jika tidak ada email (offline mode)
+    try {
+      orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
+    } catch { orders = []; }
   }
 
   const badge = document.getElementById('orders-count-badge');
@@ -404,7 +416,7 @@ async function renderOrderHistory(badgeOnly = false) {
   if (emptyState) emptyState.classList.add('hidden');
   listContainer.classList.remove('hidden');
 
-  // 3. SINKRONISASI STATUS & LINK DRIVE KE BACKEND SECARA ASYNC
+  // 3. SINKRONISASI STATUS & LINK DRIVE KHUSUS ORDER BELUM LUNAS
   const syncPromises = orders.map((order, index) => {
     const s = (order.status || '').toUpperCase();
     
@@ -429,14 +441,14 @@ async function renderOrderHistory(badgeOnly = false) {
             }
           }
         })
-        .catch(err => console.warn('Error fetching order status:', err));
+        .catch(err => console.warn('Error status poll:', err));
     }
     return Promise.resolve();
   });
 
   await Promise.all(syncPromises);
 
-  // Simpan data terefreshed kembali ke LocalStorage
+  // Update Cache Lokal
   localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
 
   // 4. RENDER UI CARDS
