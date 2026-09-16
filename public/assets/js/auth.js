@@ -348,16 +348,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// 4. RENDER ORDER HISTORY — Riwayat Pesanan Sinkron Lintas Device
+// 4. RENDER ORDER HISTORY — Instant Load + Background Sync
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
  * @param {boolean} badgeOnly - Jika true, hanya update badge hitungan
  */
 async function renderOrderHistory(badgeOnly = false) {
-  let orders = [];
+  const emptyState = document.getElementById('empty-orders-state');
+  const listContainer = document.getElementById('orders-list-container');
+  const badge = document.getElementById('orders-count-badge');
 
-  // 1. Ambil Sesi User Login
+  if (!listContainer) return;
+
+  // 1. LANGKAH INSTAN: Tampilkan cache localStorage dulu (agar tidak ada delay 0 pesanan)
+  let cachedOrders = [];
+  try {
+    cachedOrders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
+  } catch { 
+    cachedOrders = []; 
+  }
+
+  if (cachedOrders.length > 0) {
+    if (badge) badge.textContent = `(${cachedOrders.length})`;
+    if (!badgeOnly) {
+      if (emptyState) emptyState.classList.add('hidden');
+      listContainer.classList.remove('hidden');
+      renderOrdersToUI(cachedOrders, listContainer);
+    }
+  } else if (!badgeOnly) {
+    // Jika belum ada cache sama sekali, tampilkan indikator Loading Skeleton
+    listContainer.classList.remove('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
+    listContainer.innerHTML = `
+      <div class="p-8 text-center bg-white rounded-2xl border border-gray-100 shadow-sm space-y-3">
+        <div class="inline-block w-8 h-8 border-4 border-brown/20 border-t-brown rounded-full animate-spin"></div>
+        <p class="text-sm font-semibold text-brown">Memuat riwayat pesanan dari Odoo...</p>
+      </div>
+    `;
+  }
+
+  // 2. LANGKAH LATAR BELAKANG: Tarik data resmi dari Odoo Backend
   const dbClient = getDbClient();
   let userEmail = null;
 
@@ -370,89 +401,70 @@ async function renderOrderHistory(badgeOnly = false) {
     }
   }
 
-  // 2. SINKRONISASI REAL-TIME: SELALU FETCH PESANAN TERBARU DARI ODOO SERVER
-  if (userEmail) {
-    try {
-      const res = await fetch(`/api/orders/user/${encodeURIComponent(userEmail)}`);
-      const result = await res.json();
+  if (!userEmail) return;
 
-      if (result && result.success && Array.isArray(result.orders) && result.orders.length > 0) {
-        orders = result.orders;
-        // Simpan versi paling segar dari Odoo ke LocalStorage
-        localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
-      } else {
-        // Fallback ke cache jika Odoo belum merespons
-        orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
+  try {
+    const res = await fetch(`/api/orders/user/${encodeURIComponent(userEmail)}`);
+    const result = await res.json();
+
+    if (result && result.success && Array.isArray(result.orders)) {
+      const serverOrders = result.orders;
+
+      if (badge) badge.textContent = `(${serverOrders.length})`;
+
+      // Simpan data terbaru ke cache lokal
+      localStorage.setItem('zahasky_order_history', JSON.stringify(serverOrders));
+
+      if (badgeOnly) return;
+
+      // Jika user memang belum pernah membuat pesanan di Odoo
+      if (serverOrders.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        listContainer.classList.add('hidden');
+        return;
       }
-    } catch (err) {
-      console.warn("⚠️ Gagal fetch order dari backend, menggunakan cache lokal:", err);
-      try {
-        orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
-      } catch { orders = []; }
-    }
-  } else {
-    // Jika tidak ada email (offline mode)
-    try {
-      orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
-    } catch { orders = []; }
-  }
 
-  const badge = document.getElementById('orders-count-badge');
-  if (badge) badge.textContent = `(${orders.length})`;
-
-  if (badgeOnly) return;
-
-  const emptyState = document.getElementById('empty-orders-state');
-  const listContainer = document.getElementById('orders-list-container');
-
-  if (!listContainer) return;
-
-  if (orders.length === 0) {
-    if (emptyState) { emptyState.classList.remove('hidden'); }
-    listContainer.classList.add('hidden');
-    return;
-  }
-
-  if (emptyState) emptyState.classList.add('hidden');
-  listContainer.classList.remove('hidden');
-
-  // 3. SINKRONISASI STATUS & LINK DRIVE KHUSUS ORDER BELUM LUNAS
-  const syncPromises = orders.map((order, index) => {
-    const s = (order.status || '').toUpperCase();
-    
-    if (['DRAFT', 'QUOTATION', 'PENDING', 'PROCESSING', 'SALE', 'PAID', 'CONFIRMED'].includes(s) || !order.driveLink) {
-      return fetch(`/api/payment/status/${order.order_id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.success) {
-            if (['PAID', 'SUCCEEDED', 'SETTLED', 'SALE', 'CONFIRMED', 'COMPLETED', 'DONE'].includes((data.status || '').toUpperCase())) {
-              orders[index].status = 'PAID';
-            }
-
-            if (data.driveLink) {
-              orders[index].driveLink = data.driveLink;
-              if (orders[index].items) {
-                orders[index].items.forEach(item => {
-                  item.driveLink = data.driveLink;
-                  item.drive_link = data.driveLink;
-                  item.x_digital_file_url = data.driveLink;
-                });
+      // SINKRONISASI STATUS & LINK DRIVE KHUSUS ORDER BELUM LUNAS
+      const syncPromises = serverOrders.map((order, index) => {
+        const s = (order.status || '').toUpperCase();
+        if (['DRAFT', 'QUOTATION', 'PENDING', 'PROCESSING', 'SALE', 'PAID', 'CONFIRMED'].includes(s) || !order.driveLink) {
+          return fetch(`/api/payment/status/${order.order_id}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.success) {
+                if (['PAID', 'SUCCEEDED', 'SETTLED', 'SALE', 'CONFIRMED', 'COMPLETED', 'DONE'].includes((data.status || '').toUpperCase())) {
+                  serverOrders[index].status = 'PAID';
+                }
+                if (data.driveLink) {
+                  serverOrders[index].driveLink = data.driveLink;
+                  if (serverOrders[index].items) {
+                    serverOrders[index].items.forEach(item => { item.driveLink = data.driveLink; });
+                  }
+                }
               }
-            }
-          }
-        })
-        .catch(err => console.warn('Error status poll:', err));
+            })
+            .catch(err => console.warn('Error status poll:', err));
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(syncPromises);
+
+      // Render ulang tampilan dengan data ter-update dari Odoo
+      if (emptyState) emptyState.classList.add('hidden');
+      listContainer.classList.remove('hidden');
+      renderOrdersToUI(serverOrders, listContainer);
     }
-    return Promise.resolve();
-  });
+  } catch (err) {
+    console.warn("⚠️ Gagal sync riwayat pesanan dari Odoo:", err);
+  }
+}
 
-  await Promise.all(syncPromises);
-
-  // Update Cache Lokal
-  localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
-
-  // 4. RENDER UI CARDS
-  listContainer.innerHTML = orders.map((order, idx) => {
+/**
+ * Helper Fungsi untuk Render Kartu Pesanan ke HTML Container
+ */
+function renderOrdersToUI(orders, container) {
+  container.innerHTML = orders.map((order, idx) => {
     const date    = new Date(order.date);
     const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const statusLabel = getOrderStatusLabel(order.status);
