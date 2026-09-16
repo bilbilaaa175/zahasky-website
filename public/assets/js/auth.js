@@ -1,7 +1,8 @@
 /**
  * auth.js
  * -----------------------------------------------------------------------
- * Logika gabungan untuk Register, Login, dan manajemen profile.
+ * Logika gabungan untuk Register, Login, Manajemen Profile,
+ * dan Riwayat Pesanan (Order History).
  * -----------------------------------------------------------------------
  */
 
@@ -157,6 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoutBtn = document.getElementById("logout-btn");
   const dbClient = getDbClient();
 
+  // LOGOUT HANDLER (Hanya menghapus token sesi, TIDAK menghapus localStorage riwayat pesanan)
   if (logoutBtn && dbClient) {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -165,8 +167,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (err) {
         console.error("Error signing out:", err);
       } finally {
-        localStorage.clear();
-        window.location.href = "index.html";
+        localStorage.removeItem("sb-access-token");
+        localStorage.removeItem("sb-refresh-token");
+        window.location.href = "login.html";
       }
     });
   }
@@ -234,6 +237,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await loadUserProfile();
 
+  // TAB NAVIGATION
   const tabBtnInfo = document.getElementById("tab-btn-info");
   const tabBtnSecurity = document.getElementById("tab-btn-security");
   const tabBtnOrders = document.getElementById("tab-btn-orders");
@@ -282,6 +286,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   renderOrderHistory(true);
 
+  // UPDATE PROFILE
   profileForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -316,6 +321,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // UPDATE PASSWORD
   if (passwordForm) {
     passwordForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -342,7 +348,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// RENDER ORDER HISTORY — Riwayat Pesanan di Profil
+// 4. RENDER ORDER HISTORY — Riwayat Pesanan di Profil
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
@@ -350,9 +356,34 @@ document.addEventListener("DOMContentLoaded", async () => {
  */
 async function renderOrderHistory(badgeOnly = false) {
   let orders = [];
+
+  // 1. Coba baca dari localStorage lokal dulu
   try {
     orders = JSON.parse(localStorage.getItem('zahasky_order_history')) || [];
-  } catch { orders = []; }
+  } catch { 
+    orders = []; 
+  }
+
+  // 2. Jika di localStorage kosong (Misal baru login di device/browser lain), panggil API Backend berdasarkan email user
+  const dbClient = getDbClient();
+  if (dbClient && dbClient.auth) {
+    try {
+      const { data: { session } } = await dbClient.auth.getSession();
+      
+      if (session?.user?.email && orders.length === 0) {
+        const userEmail = session.user.email;
+        const res = await fetch(`/api/orders/user/${encodeURIComponent(userEmail)}`);
+        const result = await res.json();
+
+        if (result && result.success && Array.isArray(result.orders)) {
+          orders = result.orders;
+          localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Gagal mengambil riwayat pesanan dari backend:", err);
+    }
+  }
 
   const badge = document.getElementById('orders-count-badge');
   if (badge) badge.textContent = `(${orders.length})`;
@@ -373,11 +404,10 @@ async function renderOrderHistory(badgeOnly = false) {
   if (emptyState) emptyState.classList.add('hidden');
   listContainer.classList.remove('hidden');
 
-  // --- 1. SINKRONISASI ASYNC KE BACKEND TERLEBIH DAHULU ---
+  // 3. SINKRONISASI STATUS & LINK DRIVE KE BACKEND SECARA ASYNC
   const syncPromises = orders.map((order, index) => {
     const s = (order.status || '').toUpperCase();
     
-    // Tarik status dari API jika statusnya belum lunas atau link belum ada
     if (['DRAFT', 'QUOTATION', 'PENDING', 'PROCESSING', 'SALE', 'PAID', 'CONFIRMED'].includes(s) || !order.driveLink) {
       return fetch(`/api/payment/status/${order.order_id}`)
         .then(res => res.json())
@@ -404,37 +434,36 @@ async function renderOrderHistory(badgeOnly = false) {
     return Promise.resolve();
   });
 
-  // Tunggu semua status & link Drive terbaru ditarik dari API
   await Promise.all(syncPromises);
 
-  // Simpan hasil update ke LocalStorage
+  // Simpan data terefreshed kembali ke LocalStorage
   localStorage.setItem('zahasky_order_history', JSON.stringify(orders));
 
-  // --- 2. RENDER UI SETELAH DATA LINK DRIVE TERSEDIA ---
+  // 4. RENDER UI CARDS
   listContainer.innerHTML = orders.map((order, idx) => {
     const date    = new Date(order.date);
     const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const statusLabel = getOrderStatusLabel(order.status);
     const statusColor = getOrderStatusColor(order.status);
     const hasPhysical = order.has_physical;
-    const hasDigital  = order.has_digital ?? true; // Default true jika tidak didefinisikan
+    const hasDigital  = order.has_digital ?? true;
 
-    const previewImgs = order.items.slice(0, 3).map(item =>
+    const previewImgs = (order.items || []).slice(0, 3).map(item =>
       `<img src="${item.image_url || ''}" alt="${item.name}"
             class="w-10 h-10 object-cover border border-brown/10 rounded-sm"
             onerror="this.src='https://via.placeholder.com/40?text=?'" />`
     ).join('');
 
     return `
-      <div class="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
+      <div class="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden mb-4">
 
-        <!-- ── CARD HEADER (Selalu Tampil) ── -->
+        <!-- ── CARD HEADER ── -->
         <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer select-none hover:bg-gray-50 transition-colors"
              onclick="toggleOrderCard('order-detail-${idx}', 'order-chevron-${idx}')">
           
           <div class="flex items-center gap-1.5 shrink-0">
             ${previewImgs}
-            ${order.items.length > 3 ? `<span class="text-[10px] text-muted font-semibold ml-1">+${order.items.length - 3}</span>` : ''}
+            ${(order.items || []).length > 3 ? `<span class="text-[10px] text-muted font-semibold ml-1">+${order.items.length - 3}</span>` : ''}
           </div>
 
           <div class="flex-1 min-w-0">
@@ -444,8 +473,8 @@ async function renderOrderHistory(badgeOnly = false) {
               ${hasPhysical ? '<span class="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">Fisik</span>' : ''}
               ${hasDigital ? '<span class="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Digital</span>' : ''}
             </div>
-            <p class="text-xs text-muted">${dateStr} · ${order.payment_method}${order.payment_sub && order.payment_sub !== order.payment_method ? ' (' + order.payment_sub + ')' : ''}</p>
-            <p class="text-xs text-muted mt-0.5">${order.items.length} produk · <span class="font-mono font-bold text-brown">${formatRpStatic(order.total)}</span></p>
+            <p class="text-xs text-muted">${dateStr} · ${order.payment_method || 'Xendit'}${order.payment_sub && order.payment_sub !== order.payment_method ? ' (' + order.payment_sub + ')' : ''}</p>
+            <p class="text-xs text-muted mt-0.5">${(order.items || []).length} produk · <span class="font-mono font-bold text-brown">${formatRpStatic(order.total)}</span></p>
           </div>
 
           <svg id="order-chevron-${idx}" class="w-5 h-5 text-muted shrink-0 transition-transform duration-200"
@@ -454,14 +483,14 @@ async function renderOrderHistory(badgeOnly = false) {
           </svg>
         </div>
 
-        <!-- ── CARD DETAIL (Toggle) ── -->
+        <!-- ── CARD DETAIL (Accordion) ── -->
         <div id="order-detail-${idx}" class="hidden border-t border-gray-100">
           <div class="px-5 py-4 space-y-4">
 
             <div>
               <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Produk yang Dipesan</p>
               <div class="space-y-3">
-                ${order.items.map(item => renderOrderItemCard(item, order.status, order.driveLink)).join('')}
+                ${(order.items || []).map(item => renderOrderItemCard(item, order.status, order.driveLink)).join('')}
               </div>
             </div>
 
@@ -470,7 +499,7 @@ async function renderOrderHistory(badgeOnly = false) {
             <div class="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
               <div class="flex justify-between text-muted text-xs">
                 <span>Subtotal Produk</span>
-                <span class="font-mono">${formatRpStatic(order.subtotal)}</span>
+                <span class="font-mono">${formatRpStatic(order.subtotal || order.total)}</span>
               </div>
               ${order.shipping_cost > 0 ? `
               <div class="flex justify-between text-muted text-xs">
@@ -495,13 +524,9 @@ async function renderOrderHistory(badgeOnly = false) {
  * Render kartu item produk di Riwayat Pesanan
  */
 function renderOrderItemCard(item, orderStatus, parentDriveLink = null) {
-  // MENGAMBIL LINK DRIVE DARI ITEM ATAU PARENT ORDER
   const driveLink = item.driveLink || item.x_digital_file_url || item.drive_link || item.x_drive_link || parentDriveLink || null;
-  
-  // SEMUA ITEM DIANGGAP DIGITAL JIKA TIDAK ADA TIPE FISIK SPECIFIC
   const isDigital = Boolean(driveLink) || !['publicity', 'physical'].includes((item.page_type || '').toLowerCase());
   
-  // CEK STATUS LUNAS
   const statusUpper = (orderStatus || '').toUpperCase();
   const isPaid = ['PAID', 'SUCCEEDED', 'SETTLED', 'CONFIRMED', 'COMPLETED', 'SALE', 'DONE'].includes(statusUpper);
 
@@ -519,7 +544,7 @@ function renderOrderItemCard(item, orderStatus, parentDriveLink = null) {
         </div>
         <p class="text-xs text-muted mt-1">${item.quantity || 1}× ${formatRpStatic(item.price)}</p>
 
-        <!-- KONDISI LINK DIGITAL GOOGLE DRIVE -->
+        <!-- KONDISI TOMBOL DRIVE LINK -->
         ${isDigital ? `
           ${isPaid && driveLink ? `
             <a href="${driveLink}" target="_blank" rel="noopener noreferrer"
@@ -573,28 +598,23 @@ function toggleOrderCard(detailId, chevronId) {
   if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 
-/** Format rupiah tanpa butuh global function */
+/** Format rupiah */
 function formatRpStatic(amount) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount || 0);
 }
 
-/** Label & warna status order produk digital */
+/** Label & warna status order */
 function getOrderStatusLabel(status) {
   const s = (status || '').toLowerCase();
   const map = {
-    // Belum bayar / Quotation Odoo (BIRU)
     'draft':        'Menunggu Pembayaran',
     'pending':      'Menunggu Pembayaran',
     'quotation':    'Menunggu Pembayaran',
-    
-    // Lunas / Sales Order Odoo (HIJAU)
     'paid':         'Pembayaran Selesai',
     'sale':         'Pembayaran Selesai',
     'confirmed':    'Pembayaran Selesai',
     'completed':    'Pembayaran Selesai',
     'done':         'Pembayaran Selesai',
-
-    // Dibatalkan (MERAH)
     'cancelled':    'Dibatalkan',
     'cancel':       'Dibatalkan'
   };
@@ -604,19 +624,14 @@ function getOrderStatusLabel(status) {
 function getOrderStatusColor(status) {
   const s = (status || '').toLowerCase();
   const map = {
-    // Belum bayar / Quotation Odoo (BIRU)
     'draft':        'bg-blue-100 text-blue-700',
     'pending':      'bg-blue-100 text-blue-700',
     'quotation':    'bg-blue-100 text-blue-700',
-    
-    // Lunas / Sales Order Odoo (HIJAU)
     'paid':         'bg-green-100 text-green-700',
     'sale':         'bg-green-100 text-green-700',
     'confirmed':    'bg-green-100 text-green-700',
     'completed':    'bg-green-100 text-green-700',
     'done':         'bg-green-100 text-green-700',
-
-    // Dibatalkan (MERAH)
     'cancelled':    'bg-red-100 text-red-700',
     'cancel':       'bg-red-100 text-red-700'
   };

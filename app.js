@@ -6,7 +6,7 @@ const express = require('express');
 // Menggunakan cara import modular sesuai dengan SDK Xendit versi terbaru
 const { Xendit } = require('xendit-node'); 
 
-// Mengimpor modul dari odooService
+// PERBAIKAN: Menambahkan getOrdersByCustomerEmail ke dalam daftar import
 const { 
     getProducts, 
     getProductById, 
@@ -14,7 +14,8 @@ const {
     confirmSalesOrder, 
     confirmSalesOrderByRef,
     getDigitalFileUrl, 
-    getDigitalUrlByOrderId 
+    getDigitalUrlByOrderId,
+    getOrdersByCustomerEmail
 } = require('./odooService');
 
 const app = express();
@@ -165,10 +166,11 @@ app.get('/api/products/:id/image', async (req, res) => {
 // 1. Process Checkout (Quotation Odoo + Invoice Xendit)
 app.post('/api/checkout', async (req, res) => {
     try {
-        const { orderId, amount, customerEmail, customerName, items, description, bankCode } = req.body; 
+        const { orderId, amount, customerEmail, payerEmail, customerName, items, description, bankCode } = req.body; 
 
         const externalId = orderId || `ZHK-${Date.now()}`;
         const totalAmount = parseFloat(amount || 0);
+        const targetEmail = customerEmail || payerEmail || 'customer@zahasky.com';
 
         // A. Buat Quotation di Odoo
         try {
@@ -185,7 +187,7 @@ app.post('/api/checkout', async (req, res) => {
             if (code === 'QRIS') {
                 paymentMethodsFilter = ['QR_CODE'];
             } else {
-                paymentMethodsFilter = [code]; // misal: ['BNI'], ['BCA'], ['MANDIRI']
+                paymentMethodsFilter = [code];
             }
         }
 
@@ -193,7 +195,7 @@ app.post('/api/checkout', async (req, res) => {
         const invoiceData = {
             externalId: externalId,
             amount: totalAmount,
-            payerEmail: customerEmail || 'customer@zahasky.com',
+            payerEmail: targetEmail,
             description: description || `Pembayaran Pesanan Zahasky (${externalId})`,
             invoiceDuration: '86400',
             successRedirectUrl: `${req.protocol}://${req.get('host')}/profile.html?tab=orders&status=success`,
@@ -232,7 +234,6 @@ app.post('/api/payment/va', async (req, res) => {
         const { orderId, amount, bankCode, customerName, customerEmail, items } = req.body;
         const externalId = orderId || `ZHK-${Date.now()}`;
 
-        // Buat Quotation di Odoo
         try {
             const odooOrderId = await createSalesOrder(1, items || [], externalId);
             console.log(`✓ [Odoo VA] Quotation (${externalId}) sukses dibuat di Odoo ID: #${odooOrderId}`);
@@ -282,7 +283,6 @@ app.post('/api/payment/ewallet', async (req, res) => {
         const externalId = orderId || `ZHK-${Date.now()}`;
         const totalAmount = parseFloat(amount || 0);
 
-        // Buat Quotation di Odoo
         try {
             const odooOrderId = await createSalesOrder(1, items || [], externalId);
             console.log(`✓ [Odoo] Quotation (${externalId}) sukses dibuat di Odoo dengan Order ID: #${odooOrderId}`);
@@ -437,6 +437,23 @@ app.get('/api/orders/:orderId/digital-link', async (req, res) => {
     } catch (error) {
         console.error("❌ [Digital Link Error]:", error.message);
         res.status(500).json({ success: false, message: error.message, driveLink: null });
+    }
+});
+
+// 3. Ambil Riwayat Pesanan Berdasarkan Email / User ID
+app.get('/api/orders/user/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        
+        const userOrders = await getOrdersByCustomerEmail(email);
+
+        res.json({
+            success: true,
+            orders: userOrders || []
+        });
+    } catch (error) {
+        console.error("❌ [Get User Orders Error]:", error.message);
+        res.status(500).json({ success: false, message: error.message, orders: [] });
     }
 });
 
