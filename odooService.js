@@ -30,7 +30,7 @@ async function authenticate() {
     });
 }
 
-// Helper Internal untuk Fetch Data dengan fallback field aman jika custom field gagal
+// Helper Internal untuk Fetch Data
 function executeSearchRead(objectClient, uid, model, domain, fields) {
     return new Promise((resolve, reject) => {
         objectClient.methodCall('execute_kw', [
@@ -67,7 +67,6 @@ async function findOrCreatePartner(email, name) {
         const uid = await authenticate();
         const objectClient = createClient('/xmlrpc/2/object');
 
-        // Cari partner yang sudah ada berdasarkan email
         const existingPartners = await executeSearchRead(
             objectClient, uid,
             'res.partner',
@@ -79,7 +78,6 @@ async function findOrCreatePartner(email, name) {
             return existingPartners[0].id;
         }
 
-        // Jika belum ada, buat Partner/Customer baru di Odoo
         const partnerName = name || email.split('@')[0];
         const newPartnerId = await executeKw(
             objectClient, uid,
@@ -155,7 +153,6 @@ async function createSalesOrder(customerEmail, items, clientRef, customerName) {
     const uid = await authenticate();
     const objectClient = createClient('/xmlrpc/2/object');
 
-    // Cari/Buat ID Partner Pembeli berdasarkan Email
     const partnerId = await findOrCreatePartner(customerEmail, customerName);
 
     return new Promise(async (resolve, reject) => {
@@ -226,7 +223,7 @@ async function confirmSalesOrder(orderId) {
             [[parseInt(orderId)]]
         ], (err, result) => {
             if (err) return reject(err);
-            console.log(`✓ [Odoo] Order ID #${orderId} dikonfirmasi menjadi Sales Order!`);
+            console.log(`✓ [Odoo] Order ID #${orderId} dikonfirmasi!`);
             resolve(result);
         });
     });
@@ -353,7 +350,7 @@ async function getDigitalUrlByOrderId(orderId) {
     });
 }
 
-// 8. Ambil Daftar Sales Order dari Odoo Berdasarkan Email Customer
+// 8. Ambil Daftar Sales Order dari Odoo Berdasarkan Email Customer (Format Jam & Deduplikasi)
 async function getOrdersByCustomerEmail(customerEmail) {
     try {
         if (!customerEmail) return [];
@@ -368,7 +365,6 @@ async function getOrdersByCustomerEmail(customerEmail) {
             [[['email', '=', customerEmail]]]
         ).catch(() => []);
 
-        // Domain pencarian: Cari order yang dimiliki oleh partner_id user atau client_order_ref cocok
         let domain = [];
         if (partnerIds && partnerIds.length > 0) {
             domain = ['|', ['partner_id', 'in', partnerIds], ['client_order_ref', 'ilike', customerEmail]];
@@ -388,8 +384,8 @@ async function getOrdersByCustomerEmail(customerEmail) {
             return [];
         }
 
-        // C. Map Detail Items & Drive Link
-        const formattedOrders = await Promise.all(orders.map(async (ord) => {
+        // C. Map Detail Items, Konversi Jam UTC ke WIB, dan Handle Deduplikasi
+        const rawFormatted = await Promise.all(orders.map(async (ord) => {
             let items = [];
             if (ord.order_line && ord.order_line.length > 0) {
                 const lines = await executeSearchRead(
@@ -424,6 +420,12 @@ async function getOrdersByCustomerEmail(customerEmail) {
                 }
             }
 
+            // PERBAIKAN JAM UTC -> ZONA WAKTU LOKAL
+            let dateFormatted = ord.date_order || new Date().toISOString();
+            if (typeof dateFormatted === 'string' && !dateFormatted.endsWith('Z') && !dateFormatted.includes('+')) {
+                dateFormatted = dateFormatted.replace(' ', 'T') + 'Z';
+            }
+
             return {
                 order_id: ord.client_order_ref || ord.name,
                 odoo_name: ord.name,
@@ -431,14 +433,28 @@ async function getOrdersByCustomerEmail(customerEmail) {
                 orderState: ord.state,
                 total: ord.amount_total,
                 subtotal: ord.amount_total,
-                date: ord.date_order,
-                payment_method: 'Xendit',
+                date: dateFormatted,
+                payment_method: 'Xendit Gateway',
                 driveLink: driveLink,
                 items: items
             };
         }));
 
-        return formattedOrders;
+        // D. FILTER DEDUPLIKASI: Jika ada order_id yang sama, utamakan status 'PAID'
+        const uniqueOrdersMap = new Map();
+        for (const ord of rawFormatted) {
+            const key = ord.order_id;
+            if (!uniqueOrdersMap.has(key)) {
+                uniqueOrdersMap.set(key, ord);
+            } else {
+                const existing = uniqueOrdersMap.get(key);
+                if (existing.status !== 'PAID' && ord.status === 'PAID') {
+                    uniqueOrdersMap.set(key, ord);
+                }
+            }
+        }
+
+        return Array.from(uniqueOrdersMap.values());
 
     } catch (error) {
         console.error("❌ Error di getOrdersByCustomerEmail:", error.message);
