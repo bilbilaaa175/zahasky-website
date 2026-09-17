@@ -102,13 +102,13 @@ async function getProducts() {
         const objectClient = createClient('/xmlrpc/2/object');
 
         const fullFields = [
-            'name', 'list_price', 'categ_id', 'image_128',
+            'name', 'list_price', 'categ_id', 'image_1024', 'image_1920', 'image_128',
             'x_product_description', 'x_digital_file_url', 
             'x_product_type', 'x_series', 'x_designer_name', 
             'x_designer_role', 'x_file_format', 'x_file_size'
         ];
 
-        const basicFields = ['name', 'list_price', 'categ_id', 'image_128'];
+        const basicFields = ['name', 'list_price', 'categ_id', 'image_1024', 'image_1920', 'image_128'];
 
         try {
             return await executeSearchRead(objectClient, uid, 'product.template', [[]], fullFields);
@@ -129,13 +129,13 @@ async function getProductById(productId) {
     const pId = parseInt(productId);
 
     const fullFields = [
-        'name', 'list_price', 'categ_id', 'image_128',
+        'name', 'list_price', 'categ_id', 'image_1024', 'image_1920', 'image_128',
         'x_product_description', 'x_digital_file_url', 
         'x_product_type', 'x_series', 'x_designer_name', 
         'x_designer_role', 'x_file_format', 'x_file_size'
     ];
 
-    const basicFields = ['name', 'list_price', 'categ_id', 'image_128'];
+    const basicFields = ['name', 'list_price', 'categ_id', 'image_1024', 'image_1920', 'image_128'];
 
     try {
         const products = await executeSearchRead(objectClient, uid, 'product.template', [[['id', '=', pId]]], fullFields);

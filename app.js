@@ -55,6 +55,9 @@ function formatProductData(req, product) {
         x_designer_role: formattedRole
     };
 
+    delete formatted.image_1024;
+    delete formatted.image_1920;
+    delete formatted.image_512;
     delete formatted.image_128;
     formatted.image_url = `${protocol}://${host}/api/products/${product.id}/image`;
 
@@ -134,11 +137,13 @@ app.get('/api/products/:id', async (req, res) => {
 app.get('/api/products/:id/image', async (req, res) => {
     try {
         const product = await getProductById(req.params.id);
-        if (!product || !product.image_128) {
+        const rawImage = product ? (product.image_1024 || product.image_1920 || product.image_512 || product.image_128) : null;
+        
+        if (!rawImage) {
             return res.status(404).send('Gambar tidak ditemukan');
         }
 
-        const imgBuffer = Buffer.from(product.image_128, 'base64');
+        const imgBuffer = Buffer.from(rawImage, 'base64');
         
         res.writeHead(200, {
             'Content-Type': 'image/png',

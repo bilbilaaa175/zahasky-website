@@ -164,19 +164,22 @@ function applyFiltersAndRender() {
   const filtered = allProducts.filter((product) => {
     // Ambil nama kategori dari Odoo / API
     const categoryName = Array.isArray(product.categ_id) ? product.categ_id[1] : (product.category || "");
-    
-    // 1. Filter Kategori (Abaikan huruf besar/kecil)
-    const matchCategory =
-      currentCategory === "ALL" ||
-      categoryName.toLowerCase().includes(currentCategory.toLowerCase());
-
-    // 2. Filter Search Bar (Cari di Nama atau Deskripsi)
     const productName = product.name || "";
     const productDesc = product.x_product_description || "";
-    
+    const series = product.x_series || "";
+
+    // 1. Filter Kategori
+    const matchCategory =
+      currentCategory === "ALL" ||
+      categoryName.toLowerCase().includes(currentCategory.toLowerCase()) ||
+      productName.toLowerCase().includes(currentCategory.toLowerCase());
+
+    // 2. Filter Search Bar (Cari di Nama, Deskripsi, atau Seri)
     const matchSearch =
+      !currentSearchQuery ||
       productName.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
-      productDesc.toLowerCase().includes(currentSearchQuery.toLowerCase());
+      productDesc.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
+      series.toLowerCase().includes(currentSearchQuery.toLowerCase());
 
     return matchCategory && matchSearch;
   });

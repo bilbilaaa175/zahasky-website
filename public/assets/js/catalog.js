@@ -157,6 +157,14 @@ async function renderListView() {
   }
 }
 
+// Kamus kata kunci untuk mencocokkan filter kategori (Bilingual Indo/Inggris)
+const CATEGORY_KEYWORDS = {
+  'kursi': ['kursi', 'chair', 'armchair', 'seat', 'stool', 'bench'],
+  'meja': ['meja', 'table', 'desk'],
+  'lemari': ['lemari', 'cupboard', 'wardrobe', 'cabinet', 'drawer', 'shelf', 'rak'],
+  'sofa': ['sofa', 'couch', 'lounge']
+};
+
 // Fungsi menyaring produk berdasarkan pencarian & kategori
 function applyFiltersAndRender() {
   const grid = document.getElementById("list-grid");
@@ -164,19 +172,29 @@ function applyFiltersAndRender() {
   const filtered = allProducts.filter((product) => {
     // Ambil nama kategori dari Odoo / API
     const categoryName = Array.isArray(product.categ_id) ? product.categ_id[1] : (product.category || "");
-    
-    // 1. Filter Kategori (Abaikan huruf besar/kecil)
-    const matchCategory =
-      currentCategory === "ALL" ||
-      categoryName.toLowerCase().includes(currentCategory.toLowerCase());
-
-    // 2. Filter Search Bar (Cari di Nama atau Deskripsi)
     const productName = product.name || "";
     const productDesc = product.x_product_description || "";
-    
+    const series = product.x_series || "";
+
+    // 1. Filter Kategori (Mencari di categ_id Odoo maupun nama produk)
+    let matchCategory = (currentCategory === "ALL");
+    if (!matchCategory) {
+      const targetCat = currentCategory.toLowerCase();
+      const keywords = CATEGORY_KEYWORDS[targetCat] || [targetCat];
+      
+      matchCategory = keywords.some(kw => 
+        categoryName.toLowerCase().includes(kw) || 
+        productName.toLowerCase().includes(kw) ||
+        series.toLowerCase().includes(kw)
+      );
+    }
+
+    // 2. Filter Search Bar (Cari di Nama, Deskripsi, atau Seri)
     const matchSearch =
+      !currentSearchQuery ||
       productName.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
-      productDesc.toLowerCase().includes(currentSearchQuery.toLowerCase());
+      productDesc.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
+      series.toLowerCase().includes(currentSearchQuery.toLowerCase());
 
     return matchCategory && matchSearch;
   });
